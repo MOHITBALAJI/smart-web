@@ -118,12 +118,16 @@ function AuthPage() {
   };
 
   // Demo auto-fill credentials helpers with instant 1-click login
-  const handleQuickFill = async (role: "admin" | "volunteer" | "camp") => {
+  const handleQuickFill = async (role: "admin1" | "admin2" | "admin3" | "volunteer" | "camp") => {
     setError(null);
-    let email = "mohitbalaji2005@gmail.com";
+    let email = "mohitbalaji.ec23@bitsathy.ac.in";
     let pass = "12345678";
 
-    if (role === "volunteer") {
+    if (role === "admin2") {
+      email = "monish.ec23@bitsathy.ac.in";
+    } else if (role === "admin3") {
+      email = "naresh.ec23@bitsathy.ac.in";
+    } else if (role === "volunteer") {
       email = "volunteer@floodresponse.in";
       pass = "Vol@123";
     } else if (role === "camp") {
@@ -348,14 +352,20 @@ function AuthPage() {
               {/* Quick Fill Demo Helpers */}
               <div className="bg-muted/40 border border-border p-4 rounded-xl space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick Sandbox Entry</span>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button type="button" onClick={() => handleQuickFill("admin")} variant="outline" className="text-[10px] h-7 px-1">
-                    Super Admin
+                <div className="grid grid-cols-3 gap-1.5">
+                  <Button type="button" onClick={() => handleQuickFill("admin1")} variant="outline" className="text-[9px] h-7 px-1 truncate font-bold">
+                    Admin (Mohit)
                   </Button>
-                  <Button type="button" onClick={() => handleQuickFill("volunteer")} variant="outline" className="text-[10px] h-7 px-1">
+                  <Button type="button" onClick={() => handleQuickFill("admin2")} variant="outline" className="text-[9px] h-7 px-1 truncate font-bold">
+                    Admin (Monish)
+                  </Button>
+                  <Button type="button" onClick={() => handleQuickFill("admin3")} variant="outline" className="text-[9px] h-7 px-1 truncate font-bold">
+                    Admin (Naresh)
+                  </Button>
+                  <Button type="button" onClick={() => handleQuickFill("volunteer")} variant="outline" className="text-[9px] h-7 px-1 truncate col-span-1.5">
                     Volunteer
                   </Button>
-                  <Button type="button" onClick={() => handleQuickFill("camp")} variant="outline" className="text-[10px] h-7 px-1">
+                  <Button type="button" onClick={() => handleQuickFill("camp")} variant="outline" className="text-[9px] h-7 px-1 truncate col-span-1.5">
                     Camp Officer
                   </Button>
                 </div>

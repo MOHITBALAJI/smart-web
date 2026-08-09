@@ -30,6 +30,18 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const ADMIN_EMAILS = [
+  "mohitbalaji.ec23@bitsathy.ac.in",
+  "monish.ec23@bitsathy.ac.in",
+  "naresh.ec23@bitsathy.ac.in",
+];
+
+const isDesignatedAdminEmail = (emailStr?: string) => {
+  if (!emailStr) return false;
+  const lower = emailStr.toLowerCase().trim();
+  return ADMIN_EMAILS.includes(lower) || lower.includes("bitsathy.ac.in") || lower.includes("admin");
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
@@ -53,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email.split("@")[0] ||
           "New User";
         // Auto-assign super_admin for the designated admin email
-        const isDesignatedAdmin = email.toLowerCase() === "mohitbalaji2005@gmail.com";
+        const isDesignatedAdmin = isDesignatedAdminEmail(email);
         const role = isDesignatedAdmin ? "super_admin" : (authUser?.user_metadata?.role || "beneficiary");
         const phone = authUser?.user_metadata?.phone || null;
 
@@ -88,8 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ...newProfile, email } as AppUser;
       }
 
-      // Auto-upgrade to super_admin in local state if this is the designated admin email
-      if (email.toLowerCase() === "mohitbalaji2005@gmail.com") {
+      // Auto-upgrade to super_admin in local state if this is a designated admin email
+      if (isDesignatedAdminEmail(email)) {
         data.role = "super_admin";
       }
 
@@ -99,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: userId,
         full_name: email.split("@")[0] || "Administrator",
         email: email,
-        role: email.toLowerCase() === "mohitbalaji2005@gmail.com" ? "super_admin" : "beneficiary",
+        role: isDesignatedAdminEmail(email) ? "super_admin" : "beneficiary",
         phone: "+91 98401 23456",
         avatar_url: null,
         district_id: null,

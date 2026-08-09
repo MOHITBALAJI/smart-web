@@ -2,17 +2,17 @@
   "name": "relief-portal-monorepo",
   "private": true,
   "workspaces": [
-    "client",
-    "server"
+    "frontend",
+    "backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=client\" \"npm run dev --workspace=server\"",
-    "dev:client": "npm run dev --workspace=client",
-    "dev:server": "npm run dev --workspace=server",
-    "build": "npm run build --workspace=client && npm run build --workspace=server",
-    "build:client": "npm run build --workspace=client",
-    "build:server": "npm run build --workspace=server",
-    "start:server": "npm run start --workspace=server"
+    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "start:backend": "npm run start --workspace=backend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

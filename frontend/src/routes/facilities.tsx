@@ -21,7 +21,9 @@ import {
   Shield,
   Activity,
   BedDouble,
-  Info
+  Info,
+  ArrowLeft,
+  LayoutDashboard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -185,20 +187,34 @@ function PublicFacilitiesPage() {
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg">
-              <Tent className="w-5 h-5 text-white" />
-            </div>
-            <div className="leading-tight">
-              <div className="text-sm font-bold font-outfit text-foreground flex items-center gap-1.5">
-                Relief Facilities & Shelters
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => { window.location.href = "/dashboard"; }}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 font-bold text-xs border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Dashboard</span>
+            </Button>
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg">
+                <Tent className="w-5 h-5 text-white" />
               </div>
-              <div className="text-[10px] text-muted-foreground">Public Disaster Resource Portal</div>
-            </div>
-          </Link>
+              <div className="leading-tight hidden sm:block">
+                <div className="text-sm font-bold font-outfit text-foreground flex items-center gap-1.5">
+                  Relief Facilities & Shelters
+                </div>
+                <div className="text-[10px] text-muted-foreground">Public Disaster Resource Portal</div>
+              </div>
+            </Link>
+          </div>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-semibold">
-            <Link to="/" className="text-muted-foreground hover:text-foreground">Home</Link>
+            <Link to="/dashboard" className="text-primary hover:underline font-bold flex items-center gap-1">
+              <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+            </Link>
             <Link to="/rescue-route" className="text-muted-foreground hover:text-foreground flex items-center gap-1">
               <Compass className="w-3.5 h-3.5" /> Route Finder
             </Link>
@@ -208,13 +224,19 @@ function PublicFacilitiesPage() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <Button
+              onClick={() => { window.location.href = "/dashboard"; }}
+              variant="default"
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-white font-bold text-xs gap-1.5 shadow-md"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>Dashboard</span>
+            </Button>
             <Button asChild size="sm" variant="destructive" className="bg-red-600 hover:bg-red-700 font-bold gap-1 shadow-lg">
               <Link to="/emergency">
                 <Siren className="w-3.5 h-3.5" /> Emergency SOS
               </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="font-semibold text-xs">
-              <Link to="/auth">Admin Access</Link>
             </Button>
           </div>
         </div>

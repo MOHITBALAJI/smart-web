@@ -850,11 +850,14 @@ function RescueRoutePage() {
       <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-3">
-            <Button asChild variant="outline" size="sm" className="gap-1.5 font-bold text-xs border-primary/30 text-primary hover:bg-primary/10">
-              <Link to="/dashboard">
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
-              </Link>
+            <Button
+              onClick={() => { window.location.href = "/dashboard"; }}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 font-bold text-xs border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Dashboard</span>
             </Button>
             <div className="h-6 w-px bg-border hidden sm:block" />
             <Link to="/" className="flex items-center gap-2.5">
@@ -869,11 +872,14 @@ function RescueRoutePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-white font-bold text-xs gap-1.5 shadow-md">
-              <Link to="/dashboard">
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Dashboard</span>
-              </Link>
+            <Button
+              onClick={() => { window.location.href = "/dashboard"; }}
+              variant="default"
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-white font-bold text-xs gap-1.5 shadow-md"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>Dashboard</span>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-1.5 border-border hover:bg-muted/80 font-semibold text-xs">
               <Link to="/facilities">

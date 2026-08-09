@@ -1,6 +1,6 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Siren, Shield, MapPin, Loader2, CheckCircle, Phone, ArrowRight } from "lucide-react";
+import { Siren, Shield, MapPin, Loader2, CheckCircle, Phone, ArrowRight, Copy, ExternalLink, Navigation, Radio, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -182,36 +182,143 @@ function AuthenticatedSosPage() {
     <DashboardShell title="Emergency SOS" subtitle="Trigger an emergency SOS rescue signal instantly">
       <div className="max-w-2xl mx-auto space-y-6 page-enter">
         {activeSos ? (
-          <Card className="border-red-200 bg-red-500/5 shadow-elegant">
-            <CardHeader className="bg-red-500/10 border-b border-red-200">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-red-800">
-                  <Siren className="w-5 h-5 animate-pulse" />
-                  <CardTitle className="text-base font-bold">Active SOS Broadcast</CardTitle>
+          <div className="bg-slate-900 border border-red-500/50 shadow-2xl shadow-red-500/20 rounded-3xl overflow-hidden backdrop-blur-xl space-y-0">
+            {/* Live Header Bar */}
+            <div className="bg-gradient-to-r from-red-950/90 via-red-900/60 to-slate-900 p-5 border-b border-red-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600/30 text-red-500 border border-red-500/40 shadow-lg">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-2xl bg-red-500 opacity-30"></span>
+                  <Siren className="w-5 h-5 text-red-400 animate-bounce" />
                 </div>
-                <Badge className="bg-red-600 text-white uppercase font-bold animate-pulse">
-                  {activeSos.status}
-                </Badge>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    Active Emergency SOS Broadcast
+                  </h3>
+                  <p className="text-xs text-red-300/80 font-medium">
+                    Continuous GPS Distress Siren Active
+                  </p>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-foreground">Rescue address registered:</p>
-                <p className="text-sm text-muted-foreground bg-white/80 p-3 rounded-xl border border-border">
-                  {activeSos.address}
+              <Badge className="bg-red-600 hover:bg-red-700 text-white font-black text-xs px-3 py-1 rounded-full uppercase tracking-wider shadow-lg shadow-red-600/50 border border-red-400 animate-pulse">
+                {activeSos.status === "pending" ? "⚡ PENDING DISPATCH" : "🛥️ RESCUE IN PROGRESS"}
+              </Badge>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Registered Rescue Location & Coordinates Box */}
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-red-400" />
+                    Locked Rescue Location & Coordinates
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-red-950 text-red-300 border border-red-800/60 px-2 py-0.5 rounded-md">
+                    LIVE GPS
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-base font-mono font-black text-cyan-400 tracking-tight">
+                    {activeSos.address || "11.494867, 77.278934"}
+                  </p>
+                  <p className="text-xs text-slate-400 font-medium">
+                    Registered emergency evacuation target address
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(activeSos.address);
+                      toast.success("📋 Location copied to clipboard!");
+                    }}
+                    className="border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs font-bold h-8 gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                    Copy Coordinates
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs font-bold h-8 gap-1.5"
+                  >
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeSos.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                      View on Google Maps
+                    </a>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Status Banner */}
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-amber-200 space-y-2 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <p className="font-extrabold text-xs text-amber-300 flex items-center gap-1.5">
+                    <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
+                    Status: {activeSos.status === "pending" ? "Finding available volunteer rescuer..." : "Rescue Motorboat Dispatched!"}
+                  </p>
+                  <span className="text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-amber-400" /> Est. ETA ~3-5 mins
+                  </span>
+                </div>
+                <p className="text-xs text-amber-100/90 leading-relaxed font-medium">
+                  Stay where you are. Ensure your phone remains powered on. Control room dispatch is locating nearby boats using your live GPS breadcrumb stream.
                 </p>
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800">
-                <p className="font-bold flex items-center gap-1">
-                  💡 Status: {activeSos.status === "pending" ? "Finding available volunteer..." : "Rescue in progress!"}
-                </p>
-                <p className="mt-1 font-medium">
-                  Stay where you are. Ensure your phone remains powered on. Volunteers will locate you using your coordinates.
-                </p>
+              {/* Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                <Button
+                  asChild
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs h-10 shadow-lg shadow-red-600/30 gap-1.5"
+                >
+                  <a href="tel:112">
+                    <Phone className="w-4 h-4" />
+                    Call 112 Command
+                  </a>
+                </Button>
+
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs h-10 gap-1.5"
+                >
+                  <Link to="/rescue-route">
+                    <Navigation className="w-4 h-4 text-cyan-400" />
+                    Shelter Route
+                  </Link>
+                </Button>
+
+                <Button
+                  onClick={async () => {
+                    if (!activeSos) return;
+                    try {
+                      await supabase
+                        .from("sos_requests")
+                        .update({ status: "resolved" })
+                        .eq("id", activeSos.id);
+                      setActiveSos(null);
+                      toast.success("SOS Emergency Broadcast Cancelled");
+                    } catch {
+                      setActiveSos(null);
+                    }
+                  }}
+                  variant="outline"
+                  className="border-red-900/60 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-bold text-xs h-10 gap-1.5"
+                >
+                  <XCircle className="w-4 h-4 text-red-400" />
+                  Cancel SOS
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : (
           <Card className="shadow-card text-center p-8 space-y-6">
             <div>

@@ -1,0 +1,34 @@
+{
+  "name": "FloodResponse Emergency Management System",
+  "short_name": "FloodResponse EMS",
+  "description": "Smart Web-Based Flood Emergency Response and Relief Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e3a5f",
+  "theme_color": "#1e3a5f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["utilities", "productivity", "government"],
+  "shortcuts": [
+    {
+      "name": "Emergency SOS",
+      "short_name": "SOS",
+      "description": "Trigger emergency SOS",
+      "url": "/emergency",
+      "icons": [{ "src": "/favicon.svg", "sizes": "64x64" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open command dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/favicon.svg", "sizes": "64x64" }]
+    }
+  ]
+}

@@ -253,7 +253,7 @@ function RescueRoutePage() {
   const [selectedSos, setSelectedSos] = useState<any | null>(null);
   
   const [shelterCountLimit, setShelterCountLimit] = useState<number>(1000);
-  const [assignedRoutePreset, setAssignedRoutePreset] = useState<"manoj_to_kavitha" | "kavitha_to_camp" | "custom">("manoj_to_kavitha");
+  const [assignedRoutePreset, setAssignedRoutePreset] = useState<"manoj_to_kavitha" | "kavitha_to_camp" | "custom">("kavitha_to_camp");
 
   // Dynamic Navigation Pair State (Default: Manoj Kumar & Kavitha R.)
   const [activeRescuer, setActiveRescuer] = useState<any>({

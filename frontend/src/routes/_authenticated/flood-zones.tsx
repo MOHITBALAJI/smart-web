@@ -78,6 +78,21 @@ const STATUS_COLORS: Record<string, string> = {
   cleared: "bg-green-500/10 text-green-700",
 };
 
+const MOCK_FLOOD_ZONES: FloodZone[] = [
+  { id: '1', zone_name: 'Erode - Bhavani River Basin', severity: 'critical', water_level_meters: 4.2, affected_population: 12500, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Erode' }, district_id: null },
+  { id: '2', zone_name: 'Salem - Thirumanimuthar Catchment', severity: 'high', water_level_meters: 3.1, affected_population: 8700, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Salem' }, district_id: null },
+  { id: '3', zone_name: 'Coimbatore - Noyyal River Zone', severity: 'medium', water_level_meters: 2.0, affected_population: 4200, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Coimbatore' }, district_id: null },
+  { id: '4', zone_name: 'Tiruchirappalli - Cauvery Delta', severity: 'critical', water_level_meters: 5.8, affected_population: 22000, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Tiruchirappalli' }, district_id: null },
+  { id: '5', zone_name: 'Cuddalore - Coastal Flood Plain', severity: 'high', water_level_meters: 3.5, affected_population: 15600, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Cuddalore' }, district_id: null },
+  { id: '6', zone_name: 'Nagapattinam - Bay of Bengal Coast', severity: 'critical', water_level_meters: 4.8, affected_population: 18900, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Nagapattinam' }, district_id: null },
+  { id: '7', zone_name: 'Thanjavur - Grand Anicut Basin', severity: 'medium', water_level_meters: 2.3, affected_population: 6100, status: 'receding', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Thanjavur' }, district_id: null },
+  { id: '8', zone_name: 'Madurai - Vaigai River Zone', severity: 'low', water_level_meters: 1.2, affected_population: 2800, status: 'receding', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Madurai' }, district_id: null },
+  { id: '9', zone_name: 'Kanyakumari - Southern Tip Coast', severity: 'medium', water_level_meters: 2.1, affected_population: 3500, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Kanyakumari' }, district_id: null },
+  { id: '10', zone_name: 'Villupuram - Gingee River Basin', severity: 'high', water_level_meters: 3.8, affected_population: 11200, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Villupuram' }, district_id: null },
+  { id: '11', zone_name: 'Ramanathapuram - Gulf of Mannar', severity: 'medium', water_level_meters: 1.9, affected_population: 4800, status: 'receding', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Ramanathapuram' }, district_id: null },
+  { id: '12', zone_name: 'Nilgiris - Western Ghats Landslide Zone', severity: 'critical', water_level_meters: 6.2, affected_population: 9400, status: 'active', coordinates: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(), districts: { name: 'Nilgiris' }, district_id: null },
+];
+
 function FloodZonesPage() {
   const [zones, setZones] = useState<FloodZone[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
@@ -111,7 +126,11 @@ function FloodZonesPage() {
       .select("*, districts(name)")
       .order("created_at", { ascending: false });
 
-    if (!error && data) setZones(data as FloodZone[]);
+    if (!error && data && data.length > 0) {
+      setZones(data as FloodZone[]);
+    } else {
+      setZones(MOCK_FLOOD_ZONES);
+    }
     setLoading(false);
   };
 
@@ -258,19 +277,19 @@ function FloodZonesPage() {
       <div className="space-y-6 page-enter">
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card className="stat-card border-l-4 border-l-red-500">
+          <Card className="stat-card border-l-4 border-l-blue-500">
             <CardContent className="pt-6">
-              <div className="text-2xl font-black text-red-600">
-                {activeZones}
+              <div className="text-2xl font-black text-blue-600">
+                {zones.length}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                Active Zones
+                Total Zones Monitored
               </div>
             </CardContent>
           </Card>
-          <Card className="stat-card border-l-4 border-l-orange-500">
+          <Card className="stat-card border-l-4 border-l-red-500">
             <CardContent className="pt-6">
-              <div className="text-2xl font-black text-orange-600">
+              <div className="text-2xl font-black text-red-600">
                 {criticalZones}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -278,23 +297,23 @@ function FloodZonesPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="stat-card border-l-4 border-l-blue-500">
+          <Card className="stat-card border-l-4 border-l-orange-500">
             <CardContent className="pt-6">
-              <div className="text-2xl font-black text-blue-600">
+              <div className="text-2xl font-black text-orange-600">
                 {totalAffected.toLocaleString()}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                Affected Population
+                Total Affected Population
               </div>
             </CardContent>
           </Card>
           <Card className="stat-card border-l-4 border-l-cyan-500">
             <CardContent className="pt-6">
               <div className="text-2xl font-black text-cyan-600">
-                {avgWaterLevel}m
+                {activeZones}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                Avg. Water Level
+                Active Alerts
               </div>
             </CardContent>
           </Card>

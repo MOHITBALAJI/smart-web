@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
 import { AuthProvider } from "@/context/AuthContext";
+import { ReliefAIBot } from "@/components/ai/ReliefAIBot";
 
 function NotFoundComponent() {
   return (
@@ -137,6 +138,7 @@ function RootComponent() {
       <AuthProvider>
         <Outlet />
         <Toaster richColors position="top-right" expand closeButton />
+        <ReliefAIBot />
       </AuthProvider>
     </QueryClientProvider>
   );

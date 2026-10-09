@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import {
   Siren,
@@ -15,6 +15,7 @@ import {
   Shield,
   Tent,
   ArrowRight,
+  ArrowLeft,
   RefreshCw,
   Info,
   Zap,
@@ -71,6 +72,7 @@ interface SosFormData {
 type Stage = "location" | "form" | "submitting" | "success" | "tracking";
 
 function EmergencyPage() {
+  const router = useRouter();
   const [stage, setStage] = useState<Stage>("location");
   const [address, setAddress] = useState<string>("");
   const [sosId, setSosId] = useState<string | null>(null);
@@ -435,6 +437,15 @@ function EmergencyPage() {
       <header className="sticky top-0 z-50 border-b border-red-200 bg-red-600/95 backdrop-blur text-white">
         <div className="mx-auto max-w-6xl flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.history.back()}
+              className="text-white hover:bg-white/20 h-8 w-8 rounded-lg"
+              title="Go back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
             <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
               <Siren className="w-4 h-4 text-white" />
             </div>

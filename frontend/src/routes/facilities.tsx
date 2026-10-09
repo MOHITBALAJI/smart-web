@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   Tent,
@@ -75,6 +75,7 @@ interface FloodZone {
 }
 
 function PublicFacilitiesPage() {
+  const router = useRouter();
   const [camps, setCamps] = useState<ReliefCamp[]>([]);
   const [floodZones, setFloodZones] = useState<FloodZone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,13 +190,13 @@ function PublicFacilitiesPage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => { window.location.href = "/dashboard"; }}
+              onClick={() => router.history.back()}
               variant="outline"
               size="sm"
               className="gap-1.5 font-bold text-xs border-primary/30 text-primary hover:bg-primary/10"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Dashboard</span>
+              <span>Go Back</span>
             </Button>
             <div className="h-6 w-px bg-border hidden sm:block" />
             <Link to="/" className="flex items-center gap-2.5">

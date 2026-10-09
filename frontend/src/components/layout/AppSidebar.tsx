@@ -115,12 +115,6 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["super_admin", "district_admin"],
   },
   {
-    to: "/volunteer-register",
-    icon: Users,
-    label: "Volunteer Management",
-    roles: ["super_admin", "district_admin"],
-  },
-  {
     to: "/helpline",
     icon: Phone,
     label: "Helpline Directory",

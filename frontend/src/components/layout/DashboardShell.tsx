@@ -8,6 +8,7 @@ interface DashboardShellProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  description?: string;
   className?: string;
 }
 
@@ -15,6 +16,7 @@ export function DashboardShell({
   children,
   title,
   subtitle,
+  description,
   className,
 }: DashboardShellProps) {
   const [isDark, setIsDark] = React.useState(() =>
@@ -32,7 +34,7 @@ export function DashboardShell({
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopHeader
           title={title}
-          subtitle={subtitle}
+          subtitle={subtitle || description}
           onDarkModeToggle={toggleDark}
           isDark={isDark}
         />

@@ -4,20 +4,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-const getSafeLocalStorage = (key: string) => {
-  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-    try {
-      return localStorage.getItem(key);
-    } catch {}
-  }
-  return null;
-};
-
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    const hasToken = getSafeLocalStorage("sb-yugouljgwarsmkmhutke-auth-token") || getSafeLocalStorage("demo_auth_active");
-    if (!session && !hasToken) {
+
+    // Accept real Supabase session OR sandbox demo login
+    const hasDemoToken =
+      typeof window !== "undefined" &&
+      (() => { try { return localStorage.getItem("demo_auth_active") === "true"; } catch { return false; } })();
+
+    if (!session && !hasDemoToken) {
       throw redirect({ to: "/auth" });
     }
     return { session };
@@ -31,12 +27,17 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     if (!loading && !user) {
-      const hasToken = getSafeLocalStorage("sb-yugouljgwarsmkmhutke-auth-token") || getSafeLocalStorage("demo_auth_active");
-      if (!hasToken) {
-        supabase.auth.signOut().then(() => {
+      const hasDemoToken =
+        typeof window !== "undefined" &&
+        (() => { try { return localStorage.getItem("demo_auth_active") === "true"; } catch { return false; } })();
+
+      if (hasDemoToken) return; // sandbox login — user is set in React state
+
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
           navigate({ to: "/auth" });
-        });
-      }
+        }
+      });
     }
   }, [user, loading, navigate]);
 

@@ -1,9 +1,10 @@
 import React from "react";
-import { Bell, Moon, Sun, Search } from "lucide-react";
+import { Bell, Moon, Sun, Search, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 interface TopHeaderProps {
@@ -24,6 +25,7 @@ export function TopHeader({
   className,
 }: TopHeaderProps) {
   const { user } = useAuth();
+  const router = useRouter();
 
   return (
     <header
@@ -33,16 +35,27 @@ export function TopHeader({
         className
       )}
     >
-      {/* Left: Page Title */}
-      <div className="min-w-0">
-        {title && (
-          <h1 className="text-lg font-bold text-foreground truncate leading-tight">
-            {title}
-          </h1>
-        )}
-        {subtitle && (
-          <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
-        )}
+      {/* Left: Back + Page Title */}
+      <div className="flex items-center gap-3 min-w-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => router.history.back()}
+          className="shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted/80 h-8 w-8 rounded-lg"
+          title="Go back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <div className="min-w-0">
+          {title && (
+            <h1 className="text-lg font-bold text-foreground truncate leading-tight">
+              {title}
+            </h1>
+          )}
+          {subtitle && (
+            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+          )}
+        </div>
       </div>
 
       {/* Right: Actions */}

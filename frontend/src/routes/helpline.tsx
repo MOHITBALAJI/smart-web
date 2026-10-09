@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import {
   Phone,
   Shield,
@@ -66,15 +66,19 @@ const HELPLINES = [
 ];
 
 function HelplinePage() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-            <span className="text-xs font-bold font-outfit text-muted-foreground hover:text-foreground">Back to Home</span>
-          </Link>
+          <button
+            onClick={() => router.history.back()}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-xs font-bold font-outfit">Go Back</span>
+          </button>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center text-white">
               <Phone className="w-4 h-4" />

@@ -241,6 +241,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("demo_auth_active");
+        localStorage.removeItem("sb-yugouljgwarsmkmhutke-auth-token");
+      } catch {}
+    }
   };
 
   return (

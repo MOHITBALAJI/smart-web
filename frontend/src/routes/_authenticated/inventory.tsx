@@ -91,32 +91,68 @@ function InventoryPage() {
     }
   }, [selectedCampId]);
 
+const MOCK_CAMPS: Camp[] = [
+  { id: 'camp-1', name: 'Sathyamangalam Primary Relief Shelter' },
+  { id: 'camp-2', name: 'Erode Govt Higher Secondary School' },
+  { id: 'camp-3', name: 'Bhavani Community Relief Hall' },
+  { id: 'camp-4', name: 'Gobichettipalayam Indoor Stadium' },
+  { id: 'camp-5', name: 'Anthiyur Panchayat Community Center' },
+];
+
   const fetchCamps = async () => {
-    const { data, error } = await supabase.from("relief_camps").select("id, name");
-    if (!error && data) {
-      setCamps(data);
-      if (data.length > 0) {
+    try {
+      const { data, error } = await supabase.from("relief_camps").select("id, name");
+      if (!error && data && data.length > 0) {
+        setCamps(data);
         setSelectedCampId(data[0].id);
+      } else {
+        setCamps(MOCK_CAMPS);
+        setSelectedCampId(MOCK_CAMPS[0].id);
       }
+    } catch {
+      setCamps(MOCK_CAMPS);
+      setSelectedCampId(MOCK_CAMPS[0].id);
     }
   };
 
 const MOCK_INVENTORY: InventoryItem[] = [
-  { id: "i1", camp_id: "c1", item_name: "Drinking Water Bottles (1L)", category: "water", unit: "bottles", total_received: 5000, total_distributed: 3200, current_stock: 1800, min_threshold: 500, updated_at: "2026-08-09T10:00:00Z" },
-  { id: "i2", camp_id: "c1", item_name: "Emergency Rice Sacks (25kg)", category: "food", unit: "bags", total_received: 200, total_distributed: 140, current_stock: 60, min_threshold: 20, updated_at: "2026-08-09T10:30:00Z" },
-  { id: "i3", camp_id: "c1", item_name: "First Aid Medical Kits", category: "medicine", unit: "boxes", total_received: 150, total_distributed: 95, current_stock: 55, min_threshold: 30, updated_at: "2026-08-09T11:00:00Z" },
-  { id: "i4", camp_id: "c1", item_name: "Inflatable Life Jackets", category: "equipment", unit: "pcs", total_received: 120, total_distributed: 85, current_stock: 35, min_threshold: 25, updated_at: "2026-08-09T11:15:00Z" },
-  { id: "i5", camp_id: "c1", item_name: "Dry Food Packets (Ration)", category: "food", unit: "packets", total_received: 3500, total_distributed: 2800, current_stock: 700, min_threshold: 400, updated_at: "2026-08-09T11:30:00Z" },
-  { id: "i6", camp_id: "c1", item_name: "Warm Blanket Bundles", category: "clothing", unit: "units", total_received: 600, total_distributed: 490, current_stock: 110, min_threshold: 100, updated_at: "2026-08-09T12:00:00Z" },
-  { id: "i7", camp_id: "c1", item_name: "Generator Fuel (Diesel)", category: "fuel", unit: "liters", total_received: 1000, total_distributed: 650, current_stock: 350, min_threshold: 150, updated_at: "2026-08-09T12:30:00Z" },
-  { id: "i8", camp_id: "c1", item_name: "Baby Infant Formula", category: "food", unit: "tins", total_received: 250, total_distributed: 180, current_stock: 70, min_threshold: 40, updated_at: "2026-08-09T13:00:00Z" },
-  { id: "i9", camp_id: "c1", item_name: "Sanitary Hygiene Kits", category: "sanitation", unit: "kits", total_received: 800, total_distributed: 620, current_stock: 180, min_threshold: 150, updated_at: "2026-08-09T13:15:00Z" },
-  { id: "i10", camp_id: "c1", item_name: "Chlorine Water Tablets", category: "water", unit: "strips", total_received: 4000, total_distributed: 2900, current_stock: 1100, min_threshold: 500, updated_at: "2026-08-09T13:30:00Z" },
-  { id: "i11", camp_id: "c1", item_name: "Waterproof LED Flashlights", category: "equipment", unit: "pcs", total_received: 300, total_distributed: 240, current_stock: 60, min_threshold: 50, updated_at: "2026-08-09T13:45:00Z" },
-  { id: "i12", camp_id: "c1", item_name: "Tarpaulin Waterproof Tents", category: "shelter", unit: "sheets", total_received: 250, total_distributed: 195, current_stock: 55, min_threshold: 40, updated_at: "2026-08-09T14:00:00Z" },
-  { id: "i13", camp_id: "c1", item_name: "Solar Power Banks (10000mAh)", category: "equipment", unit: "units", total_received: 180, total_distributed: 135, current_stock: 45, min_threshold: 30, updated_at: "2026-08-09T14:15:00Z" },
-  { id: "i14", camp_id: "c1", item_name: "Heavy Nylon Rescue Ropes", category: "equipment", unit: "coils", total_received: 80, total_distributed: 62, current_stock: 18, min_threshold: 15, updated_at: "2026-08-09T14:30:00Z" },
-  { id: "i15", camp_id: "c1", item_name: "ORS Electrolyte Hydration Tins", category: "medicine", unit: "sachets", total_received: 3000, total_distributed: 2100, current_stock: 900, min_threshold: 400 },
+  // camp-1
+  { id: 'i1', camp_id: 'camp-1', item_name: 'Rice Bags (25kg)', category: 'food', unit: 'bags', total_received: 500, total_distributed: 400, current_stock: 100, min_threshold: 150 },
+  { id: 'i2', camp_id: 'camp-1', item_name: 'First Aid Kits', category: 'medical', unit: 'kits', total_received: 200, total_distributed: 100, current_stock: 100, min_threshold: 50 },
+  { id: 'i3', camp_id: 'camp-1', item_name: 'Tarpaulin Sheets', category: 'shelter', unit: 'sheets', total_received: 300, total_distributed: 290, current_stock: 10, min_threshold: 30 },
+  { id: 'i4', camp_id: 'camp-1', item_name: "Women's Sarees", category: 'clothing', unit: 'pieces', total_received: 250, total_distributed: 200, current_stock: 50, min_threshold: 40 },
+  { id: 'i5', camp_id: 'camp-1', item_name: 'Sanitary Pads', category: 'hygiene', unit: 'packets', total_received: 400, total_distributed: 350, current_stock: 50, min_threshold: 100 },
+  
+  // camp-2
+  { id: 'i6', camp_id: 'camp-2', item_name: 'Dal Packets', category: 'food', unit: 'packets', total_received: 300, total_distributed: 250, current_stock: 50, min_threshold: 100 },
+  { id: 'i7', camp_id: 'camp-2', item_name: 'Paracetamol Strips', category: 'medical', unit: 'strips', total_received: 500, total_distributed: 400, current_stock: 100, min_threshold: 50 },
+  { id: 'i8', camp_id: 'camp-2', item_name: 'Blankets', category: 'shelter', unit: 'pieces', total_received: 400, total_distributed: 380, current_stock: 20, min_threshold: 50 },
+  { id: 'i9', camp_id: 'camp-2', item_name: "Men's Shirts", category: 'clothing', unit: 'pieces', total_received: 200, total_distributed: 150, current_stock: 50, min_threshold: 30 },
+  { id: 'i10', camp_id: 'camp-2', item_name: 'Soap Bars', category: 'hygiene', unit: 'bars', total_received: 500, total_distributed: 300, current_stock: 200, min_threshold: 50 },
+
+  // camp-3
+  { id: 'i11', camp_id: 'camp-3', item_name: 'Ready-to-Eat Meals', category: 'food', unit: 'packets', total_received: 500, total_distributed: 450, current_stock: 50, min_threshold: 100 },
+  { id: 'i12', camp_id: 'camp-3', item_name: 'ORS Packets', category: 'medical', unit: 'packets', total_received: 400, total_distributed: 200, current_stock: 200, min_threshold: 100 },
+  { id: 'i13', camp_id: 'camp-3', item_name: 'Sleeping Mats', category: 'shelter', unit: 'pieces', total_received: 300, total_distributed: 280, current_stock: 20, min_threshold: 50 },
+  { id: 'i14', camp_id: 'camp-3', item_name: 'Children\'s Clothing Sets', category: 'clothing', unit: 'sets', total_received: 150, total_distributed: 130, current_stock: 20, min_threshold: 30 },
+  { id: 'i15', camp_id: 'camp-3', item_name: 'Toothbrush Sets', category: 'hygiene', unit: 'sets', total_received: 300, total_distributed: 150, current_stock: 150, min_threshold: 50 },
+
+  // camp-4
+  { id: 'i16', camp_id: 'camp-4', item_name: 'Biscuit Tins', category: 'food', unit: 'tins', total_received: 400, total_distributed: 300, current_stock: 100, min_threshold: 50 },
+  { id: 'i17', camp_id: 'camp-4', item_name: 'Insulin Kits', category: 'medical', unit: 'kits', total_received: 50, total_distributed: 40, current_stock: 10, min_threshold: 20 },
+  { id: 'i18', camp_id: 'camp-4', item_name: 'Mosquito Nets', category: 'shelter', unit: 'pieces', total_received: 350, total_distributed: 300, current_stock: 50, min_threshold: 100 },
+  { id: 'i19', camp_id: 'camp-4', item_name: 'Towels', category: 'clothing', unit: 'pieces', total_received: 300, total_distributed: 100, current_stock: 200, min_threshold: 50 },
+  { id: 'i20', camp_id: 'camp-4', item_name: 'Detergent Powder', category: 'hygiene', unit: 'packets', total_received: 200, total_distributed: 180, current_stock: 20, min_threshold: 50 },
+
+  // camp-5
+  { id: 'i21', camp_id: 'camp-5', item_name: 'Milk Powder', category: 'food', unit: 'tins', total_received: 150, total_distributed: 140, current_stock: 10, min_threshold: 30 },
+  { id: 'i22', camp_id: 'camp-5', item_name: 'Bandages (rolls)', category: 'medical', unit: 'rolls', total_received: 300, total_distributed: 100, current_stock: 200, min_threshold: 50 },
+  { id: 'i23', camp_id: 'camp-5', item_name: 'Plastic Buckets', category: 'shelter', unit: 'pieces', total_received: 250, total_distributed: 230, current_stock: 20, min_threshold: 40 },
+  { id: 'i24', camp_id: 'camp-5', item_name: 'Drinking Water (1L bottles)', category: 'food', unit: 'bottles', total_received: 500, total_distributed: 450, current_stock: 50, min_threshold: 100 },
+  { id: 'i25', camp_id: 'camp-5', item_name: 'Antiseptic (bottles)', category: 'medical', unit: 'bottles', total_received: 100, total_distributed: 50, current_stock: 50, min_threshold: 20 },
+  { id: 'i26', camp_id: 'camp-5', item_name: 'Cooking Oil (5L)', category: 'food', unit: 'tins', total_received: 150, total_distributed: 100, current_stock: 50, min_threshold: 30 },
+  { id: 'i27', camp_id: 'camp-5', item_name: 'Sugar (1kg)', category: 'food', unit: 'packets', total_received: 300, total_distributed: 200, current_stock: 100, min_threshold: 50 },
+  { id: 'i28', camp_id: 'camp-5', item_name: 'Masks (box of 50)', category: 'medical', unit: 'boxes', total_received: 200, total_distributed: 100, current_stock: 100, min_threshold: 50 },
 ] as unknown as InventoryItem[];
 
   const fetchInventory = async () => {
@@ -131,10 +167,10 @@ const MOCK_INVENTORY: InventoryItem[] = [
       if (!error && data && data.length > 0) {
         setItems(data);
       } else {
-        setItems(MOCK_INVENTORY);
+        setItems(MOCK_INVENTORY.filter(i => i.camp_id === selectedCampId));
       }
     } catch {
-      setItems(MOCK_INVENTORY);
+      setItems(MOCK_INVENTORY.filter(i => i.camp_id === selectedCampId));
     }
     setLoading(false);
   };

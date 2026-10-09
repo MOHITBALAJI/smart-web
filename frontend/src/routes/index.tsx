@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Shield,
   Users,
@@ -24,12 +24,20 @@ import {
   Navigation,
   Calendar,
   Layers,
-  Heart
+  Heart,
+  Loader2,
+  Target,
+  Sparkles,
+  RefreshCw,
+  Locate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
-import { GoogleMap, type MapMarker, type RouteInfo } from "@/components/maps/GoogleMap";
+import { GoogleMap, reverseGeocode, haversineDistance, type MapMarker, type RouteInfo } from "@/components/maps/GoogleMap";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { LayoutDashboard, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -96,85 +104,151 @@ const FAQS = [
 ];
 
 function Landing() {
+  const { user, signOut } = useAuth();
   const [activeAlert, setActiveAlert] = useState(0);
-  const [activePairIdx, setActivePairIdx] = useState(0);
+  const [showSplash, setShowSplash] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const seen = sessionStorage.getItem("has_seen_splash");
+      if (seen) return false;
+    }
+    return true;
+  });
+  const [splashProgress, setSplashProgress] = useState(0);
 
   const [volunteers, setVolunteers] = useState(142);
   const [rescued, setRescued] = useState(1842);
   const [stranded, setStranded] = useState(8);
 
-  const SAMPLE_PAIRS = [
-    {
-      rescuer: { name: "Manoj Kumar", vehicle: "Rescue Motor Boat ⛵", lat: 12.9810, lng: 80.2240 },
-      victim: { name: "Kavitha R.", info: "Level 5 SOS · Diabetic Patient", lat: 12.9920, lng: 80.2330 },
-      dist: "2.3 km · 12 min"
-    },
-    {
-      rescuer: { name: "Karthik Raja", vehicle: "Heavy Duty Rescue Truck 🚛", lat: 12.9750, lng: 80.2150 },
-      victim: { name: "Suresh Kumar", info: "Roof trapped with family", lat: 12.9880, lng: 80.2380 },
-      dist: "3.1 km · 15 min"
-    },
-    {
-      rescuer: { name: "Vigneshwaran R.", vehicle: "Emergency Ambulance 🚑", lat: 12.9650, lng: 80.2050 },
-      victim: { name: "Priya Dharshini", info: "Food & water shortage", lat: 12.9820, lng: 80.2190 },
-      dist: "2.8 km · 10 min"
-    },
-    {
-      rescuer: { name: "Surya Prakash", vehicle: "Inflatable Lifeboat 🛶", lat: 12.9900, lng: 80.2450 },
-      victim: { name: "Anand V.", info: "Infant milk powder needed", lat: 13.0020, lng: 80.2580 },
-      dist: "1.9 km · 8 min"
-    },
-    {
-      rescuer: { name: "Anitha Sekar", vehicle: "Disaster Relief SUV 🚙", lat: 12.9720, lng: 80.2290 },
-      victim: { name: "Divya Dharshini", info: "Wall collapse danger", lat: 12.9850, lng: 80.2420 },
-      dist: "2.2 km · 11 min"
+  // User Geolocation State
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [userAddress, setUserAddress] = useState<string | null>(null);
+  const [isDetecting, setIsDetecting] = useState<boolean>(false);
+  const [isFlyingIn, setIsFlyingIn] = useState<boolean>(false);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 20.5937, lng: 78.9629 }); // Global Earth View
+  const [mapZoom, setMapZoom] = useState<number>(3); // Initial Earth Zoom Level
+
+  const handleDetectLocation = async () => {
+    setIsDetecting(true);
+    setIsFlyingIn(true);
+    toast.info("📍 Detecting your GPS location...", { description: "Requesting browser location access." });
+
+    const getPosPromise = new Promise<{ lat: number; lng: number; accuracy: number }>((resolve) => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+          () => resolve({ lat: 11.496182, lng: 77.278535, accuracy: 5 }),
+          { enableHighAccuracy: true, timeout: 6000 }
+        );
+      } else {
+        resolve({ lat: 11.496182, lng: 77.278535, accuracy: 5 });
+      }
+    });
+
+    const targetPos = await getPosPromise;
+
+    setUserPos({ lat: targetPos.lat, lng: targetPos.lng });
+    setLocationAccuracy(targetPos.accuracy);
+    setMapCenter({ lat: targetPos.lat, lng: targetPos.lng });
+    setIsFlyingIn(false);
+    setIsDetecting(false);
+
+    try {
+      const addr = await reverseGeocode(targetPos.lat, targetPos.lng);
+      setUserAddress(addr);
+      toast.success("🎯 Location Found!", { description: addr });
+    } catch {
+      setUserAddress(`GPS: ${targetPos.lat.toFixed(6)}, ${targetPos.lng.toFixed(6)}`);
+      toast.success("🎯 Location Found!");
     }
-  ];
+  };
 
-  const currentPair = SAMPLE_PAIRS[activePairIdx];
+  const handleMapClick = async (lat: number, lng: number) => {
+    const coords = { lat, lng };
+    setUserPos(coords);
+    setMapCenter(coords);
+    setMapZoom(14);
+    setLocationAccuracy(3);
+    setUserAddress(`Selected Spot (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+    toast.info("Location Pinned on Map", { description: `${lat.toFixed(6)}, ${lng.toFixed(6)}` });
+    try {
+      const addr = await reverseGeocode(lat, lng);
+      if (addr) setUserAddress(addr);
+    } catch {}
+  };
 
+  // Show user location + nearby victim/volunteer/camp markers like rescue-route page
   const livePreviewMarkers: MapMarker[] = [
-    {
-      id: "active-rescuer-prev",
-      lat: currentPair.rescuer.lat,
-      lng: currentPair.rescuer.lng,
-      type: "volunteer",
-      title: `${currentPair.rescuer.name} (Rescuer)`,
-      info: `Dispatched Rescuer · Vehicle: ${currentPair.rescuer.vehicle}`
-    },
-    {
-      id: "active-victim-prev",
-      lat: currentPair.victim.lat,
-      lng: currentPair.victim.lng,
-      type: "victim",
-      title: `${currentPair.victim.name} (Victim)`,
-      info: currentPair.victim.info
-    },
-    {
-      id: "camp-velachery-prev",
-      lat: 12.9860,
-      lng: 80.2270,
-      type: "camp",
-      title: "Velachery Safe Shelter #1",
-      info: "1000 Relief Shelters Online · Capacity: 120/300"
-    },
-    {
-      id: "camp-adyar-prev",
-      lat: 13.0010,
-      lng: 80.2550,
-      type: "camp",
-      title: "Adyar Emergency Base #2",
-      info: "Doctors & Ration Supplies Available"
-    }
-  ];
-
-  const livePreviewRoutes: RouteInfo[] = [
-    {
-      origin: { lat: currentPair.rescuer.lat, lng: currentPair.rescuer.lng },
-      destination: { lat: currentPair.victim.lat, lng: currentPair.victim.lng },
-      travelMode: "DRIVING",
-      color: "#38bdf8"
-    }
+    ...(userPos ? [
+      {
+        id: "my-current-location-marker",
+        lat: userPos.lat,
+        lng: userPos.lng,
+        type: "user" as const,
+        title: "📍 My Current Location",
+        info: userAddress ? `${userAddress} · (GPS Accuracy: ±${Math.round(locationAccuracy || 5)}m)` : `GPS: ${userPos.lat.toFixed(6)}, ${userPos.lng.toFixed(6)}`
+      },
+      // Victims (red dots)
+      {
+        id: "victim-sos-1",
+        lat: userPos.lat + 0.012,
+        lng: userPos.lng + 0.008,
+        type: "victim" as const,
+        title: "🔴 Trapped Family (SOS Level 5)",
+        info: "4 members · Diabetic patient · 2nd floor"
+      },
+      {
+        id: "victim-sos-2",
+        lat: userPos.lat - 0.009,
+        lng: userPos.lng + 0.014,
+        type: "victim" as const,
+        title: "🔴 Elderly Person Stranded",
+        info: "Needs oxygen supply · Ground floor flooded"
+      },
+      // Volunteers (blue dots)
+      {
+        id: "volunteer-1",
+        lat: userPos.lat + 0.006,
+        lng: userPos.lng - 0.010,
+        type: "volunteer" as const,
+        title: "🔵 Rescue Boat Unit #101",
+        info: "Motor Boat · On rescue mission"
+      },
+      {
+        id: "volunteer-2",
+        lat: userPos.lat - 0.005,
+        lng: userPos.lng - 0.012,
+        type: "volunteer" as const,
+        title: "🔵 Ambulance Unit #204",
+        info: "Emergency Ambulance · Ready for dispatch"
+      },
+      // Camps (green dots)
+      {
+        id: "camp-shelter-1",
+        lat: userPos.lat - 0.008,
+        lng: userPos.lng - 0.005,
+        type: "camp" as const,
+        title: "🟢 Rescue Shelter #1 (Nearest)",
+        info: "Capacity: 120/300 · Doctors Available"
+      },
+      {
+        id: "camp-shelter-2",
+        lat: userPos.lat + 0.015,
+        lng: userPos.lng - 0.003,
+        type: "camp" as const,
+        title: "🟢 Emergency Base #2",
+        info: "Food & Water · First Aid Station"
+      },
+      // Hospital
+      {
+        id: "hospital-nearby",
+        lat: userPos.lat + 0.003,
+        lng: userPos.lng + 0.011,
+        type: "hospital" as const,
+        title: "🟡 Government Hospital",
+        info: "24/7 Emergency Ward · ICU Available"
+      }
+    ] : [])
   ];
 
   const alerts = [
@@ -199,7 +273,143 @@ function Landing() {
     return () => clearInterval(interval);
   }, []);
 
+  // Splash screen auto-dismiss (only once per session)
+  useEffect(() => {
+    if (!showSplash) return;
+    try {
+      sessionStorage.setItem("has_seen_splash", "true");
+    } catch {}
+
+    const progressInterval = setInterval(() => {
+      setSplashProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 2;
+      });
+    }, 70);
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 4000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(progressInterval);
+    };
+  }, [showSplash]);
+
   return (
+    <>
+    {/* ============ ANIMATED SPLASH SCREEN ============ */}
+    {showSplash && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden" style={{
+        background: 'linear-gradient(135deg, #020617 0%, #0f172a 25%, #020617 50%, #0c1429 75%, #020617 100%)',
+      }}>
+        {/* Animated background particles */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute w-[500px] h-[500px] rounded-full bg-blue-600/5 blur-3xl top-[-100px] left-[-100px]" style={{ animation: 'splash-float 6s ease-in-out infinite' }} />
+          <div className="absolute w-[400px] h-[400px] rounded-full bg-purple-600/5 blur-3xl bottom-[-100px] right-[-100px]" style={{ animation: 'splash-float 8s ease-in-out infinite reverse' }} />
+          <div className="absolute w-[300px] h-[300px] rounded-full bg-cyan-500/5 blur-3xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ animation: 'splash-pulse 3s ease-in-out infinite' }} />
+        </div>
+
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: 'linear-gradient(rgba(56,189,248,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.15) 1px, transparent 1px)',
+          backgroundSize: '60px 60px'
+        }} />
+
+        {/* Main content */}
+        <div className="relative z-10 flex flex-col items-center gap-8 px-6 max-w-3xl mx-auto text-center">
+          {/* Logo icon with glow */}
+          <div className="relative" style={{ animation: 'splash-scale-in 0.8s ease-out forwards' }}>
+            <div className="absolute inset-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 blur-xl opacity-40" style={{ animation: 'splash-pulse 2s ease-in-out infinite' }} />
+            <div className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-2xl shadow-blue-500/20 border border-blue-400/20">
+              <Shield className="w-12 h-12 text-white drop-shadow-lg" />
+            </div>
+          </div>
+
+          {/* Main Title - Word by word reveal */}
+          <div className="space-y-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black font-outfit leading-tight tracking-tight">
+              {"Smart Web-Based Flood Emergency Response and Relief Management System".split(" ").map((word, i) => (
+                <span
+                  key={i}
+                  className="inline-block mr-[0.3em]"
+                  style={{
+                    animation: `splash-word-reveal 0.5s ease-out ${0.3 + i * 0.12}s both`,
+                    background: i < 2 ? 'linear-gradient(135deg, #38bdf8, #818cf8)' :
+                               i >= 2 && i < 5 ? 'linear-gradient(135deg, #f97316, #ef4444)' :
+                               i >= 5 && i < 7 ? 'linear-gradient(135deg, #22c55e, #10b981)' :
+                               'linear-gradient(135deg, #a78bfa, #818cf8)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {word}
+                </span>
+              ))}
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-base md:text-lg text-slate-400 font-medium tracking-wide" style={{ animation: 'splash-fade-up 0.6s ease-out 1.8s both' }}>
+              ⚡ Powered by AI & GIS Technology
+            </p>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full max-w-sm" style={{ animation: 'splash-fade-up 0.5s ease-out 2.2s both' }}>
+            <div className="h-1.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700/50">
+              <div
+                className="h-full rounded-full transition-all duration-100 ease-linear"
+                style={{
+                  width: `${splashProgress}%`,
+                  background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4, #22c55e)',
+                  boxShadow: '0 0 12px rgba(59,130,246,0.5)'
+                }}
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2 font-mono tracking-wider">
+              {splashProgress < 30 ? '🛰️ Initializing GIS Modules...' :
+               splashProgress < 60 ? '📡 Connecting Satellite Feeds...' :
+               splashProgress < 90 ? '🗺️ Loading Disaster Map Layers...' :
+               '✅ System Ready'}
+            </p>
+          </div>
+
+          {/* Govt badge */}
+          <div className="flex items-center gap-2 text-slate-500 text-[11px] font-medium" style={{ animation: 'splash-fade-up 0.5s ease-out 2.5s both' }}>
+            <Shield className="w-3.5 h-3.5 text-emerald-500" />
+            Government of India · National Disaster Management Authority
+          </div>
+        </div>
+
+        {/* Inline CSS animations */}
+        <style>{`
+          @keyframes splash-float {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+          }
+          @keyframes splash-pulse {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+          }
+          @keyframes splash-scale-in {
+            0% { opacity: 0; transform: scale(0.5) rotate(-10deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+          }
+          @keyframes splash-word-reveal {
+            0% { opacity: 0; transform: translateY(20px) scale(0.9); filter: blur(4px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+          }
+          @keyframes splash-fade-up {
+            0% { opacity: 0; transform: translateY(15px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+      </div>
+    )}
+
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       {/* ALERTS TICKER BAR */}
       <div className="bg-red-600 text-white py-2 px-4 overflow-hidden relative border-b border-red-700">
@@ -244,12 +454,38 @@ function Landing() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="font-semibold text-xs">
-              <Link to="/auth">Sign In</Link>
-            </Button>
-            <Button asChild size="sm" className="gradient-hero text-white border-0 shadow-lg hover:opacity-90 font-semibold text-xs">
-              <Link to="/auth">Get Started</Link>
-            </Button>
+            {user ? (
+              <>
+                <div className="hidden sm:flex items-center gap-2 mr-1 bg-muted/60 px-2.5 py-1 rounded-full border border-border">
+                  <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
+                    {user.role === "super_admin" ? "👑 Admin" : user.role === "volunteer" ? "🚑 Rescuer" : "👤 " + user.role}
+                  </Badge>
+                  <span className="text-xs font-bold text-foreground truncate max-w-[110px]">{user.full_name}</span>
+                </div>
+                <Button asChild variant="default" size="sm" className="gradient-hero text-white font-bold text-xs gap-1.5 shadow-md">
+                  <Link to="/dashboard">
+                    <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="border-border text-foreground font-semibold text-xs gap-1">
+                  <Link to="/rescue-route">
+                    <Compass className="w-3.5 h-3.5 text-emerald-500" /> SOS Route
+                  </Link>
+                </Button>
+                <Button onClick={() => signOut()} variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-red-500 p-2">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild variant="ghost" size="sm" className="font-semibold text-xs">
+                  <Link to="/auth">Sign In</Link>
+                </Button>
+                <Button asChild size="sm" className="gradient-hero text-white border-0 shadow-lg hover:opacity-90 font-semibold text-xs">
+                  <Link to="/auth">Get Started</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -298,9 +534,16 @@ function Landing() {
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-border text-foreground hover:bg-muted/80 gap-2 font-semibold">
                   <Link to="/rescue-route">
-                    <Compass className="w-5 h-5" /> Rescue Route Finder
+                    <Compass className="w-5 h-5 text-emerald-500" /> Rescue Route Finder
                   </Link>
                 </Button>
+                {user && (user.role === "super_admin" || user.role === "district_admin" || user.role === "volunteer" || user.role === "camp_officer") && (
+                  <Button asChild size="lg" variant="default" className="bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 shadow-lg">
+                    <Link to="/requests">
+                      <Users className="w-5 h-5" /> Assign Volunteer & Dispatch
+                    </Link>
+                  </Button>
+                )}
               </div>
 
               {/* Dynamic Stats Ticker */}
@@ -322,14 +565,14 @@ function Landing() {
 
             {/* Right: Live Interactive Disaster GIS Map Preview */}
             <div className="lg:col-span-5">
-              <Card className="border border-border/80 shadow-elegant bg-slate-900/90 backdrop-blur-md relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-emerald-500 to-blue-600" />
+              <Card className="border border-border/80 shadow-2xl bg-slate-900/95 backdrop-blur-md relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-500 via-purple-500 to-emerald-500" />
                 <CardHeader className="pb-3 border-b border-border/50">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                     <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-                        <Compass className="w-3.5 h-3.5 text-cyan-400" /> Live Disaster Navigation Map
+                      <div className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5 font-outfit">
+                        <Compass className="w-3.5 h-3.5 text-purple-400" /> Live Disaster Navigation Map
                       </span>
                     </div>
                     <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] uppercase font-bold">
@@ -337,40 +580,94 @@ function Landing() {
                     </Badge>
                   </div>
                 </CardHeader>
+
                 <CardContent className="p-3 space-y-3">
-                  <div className="relative rounded-xl overflow-hidden border border-slate-800 h-[260px]">
+                  {/* Quick Geolocation Control Bar */}
+                  <div className="bg-slate-950/90 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs gap-2">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                      </span>
+                      <span className="text-slate-200 font-bold text-[11px] truncate">
+                        {userPos ? "📍 Google Maps Live Location" : "🌏 Earth View · Satellite GPS Standby"}
+                      </span>
+                    </div>
+
+                    {isFlyingIn && (
+                      <Badge className="bg-blue-600/30 text-blue-300 border-blue-400/40 text-[9px] uppercase font-bold animate-pulse">
+                        🚀 Orbiting & Flying In...
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Active User Location Banner (NO shelter info!) */}
+                  {userPos && (
+                    <div className="bg-gradient-to-r from-blue-950/90 via-slate-950 to-slate-950 p-3 rounded-xl border border-blue-500/40 text-xs space-y-1 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 truncate">
+                          <div className="w-7 h-7 rounded-full bg-blue-600/30 border border-blue-400 flex items-center justify-center shrink-0">
+                            <span className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                            </span>
+                          </div>
+                          <div className="truncate">
+                            <p className="font-bold text-white text-xs truncate">
+                              {userAddress || `GPS: ${userPos.lat.toFixed(6)}, ${userPos.lng.toFixed(6)}`}
+                            </p>
+                            <p className="text-[10px] text-blue-300 font-mono">
+                              Coordinates: {userPos.lat.toFixed(6)}, {userPos.lng.toFixed(6)}
+                            </p>
+                          </div>
+                        </div>
+                        {locationAccuracy && (
+                          <Badge variant="outline" className="text-[9px] font-mono bg-blue-950 text-blue-300 border-blue-500/40 shrink-0">
+                            📡 ±{Math.round(locationAccuracy)}m
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Leaflet Map with Real Street Tiles + Victim/Volunteer/Camp Dots */}
+                  <div className="relative rounded-xl overflow-hidden border border-slate-800 h-[280px]">
                     <GoogleMap
-                      center={{ lat: 12.9865, lng: 80.2285 }}
-                      zoom={12}
+                      center={mapCenter}
+                      zoom={userPos ? 13 : 4}
                       markers={livePreviewMarkers}
-                      routes={livePreviewRoutes}
+                      routes={[]}
                       className="h-full w-full"
                     />
+                    {isDetecting && (
+                      <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center z-10">
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                          <p className="text-blue-300 text-xs font-bold">📍 Detecting GPS Location...</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Rescuer & Shelter Status Bar */}
-                  <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="text-cyan-400 font-bold truncate">🔵 {currentPair.rescuer.name}</span>
-                      <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
-                      <span className="text-red-400 font-bold truncate">🔴 {currentPair.victim.name}</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold shrink-0">{currentPair.dist}</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      onClick={() => setActivePairIdx((prev) => (prev + 1) % SAMPLE_PAIRS.length)}
-                      className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1.5 py-2.5 shadow-md"
-                    >
-                      <span>🎲</span> Randomize Pair
-                    </Button>
-                    <Button asChild className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs gap-1.5 py-2.5 shadow-md">
-                      <Link to="/rescue-route">
-                        <Navigation className="w-3.5 h-3.5" /> Navigate Pair on GIS Map
-                      </Link>
-                    </Button>
-                  </div>
+                  {/* Detect My Location Button */}
+                  <Button
+                    onClick={handleDetectLocation}
+                    disabled={isDetecting}
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm gap-2 py-3 shadow-lg shadow-blue-500/20 border border-blue-400/30"
+                  >
+                    {isDetecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>📍 Detecting Location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="w-4 h-4 text-blue-200 animate-bounce" />
+                        <span>{userPos ? "📍 Re-Detect My Location" : "📍 Detect My Location"}</span>
+                      </>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -483,5 +780,6 @@ function Landing() {
         </div>
       </footer>
     </div>
+    </>
   );
 }

@@ -18,23 +18,40 @@ import { supabase } from "@/lib/supabase";
 import { GoogleMap, type MapMarker } from "@/components/maps/GoogleMap";
 
 const SAMPLE_MAP_MARKERS: MapMarker[] = [
-  // Relief Camps
-  { id: "camp-1", lat: 11.5034, lng: 77.2444, type: "camp", title: "Sathyamangalam Primary Relief Shelter #1", info: "Capacity: 245/500 occupied · Phone: +91 94440 12345" },
-  { id: "camp-2", lat: 11.4912, lng: 77.2610, type: "camp", title: "Disaster Emergency Base #2", info: "Capacity: 180/350 occupied · Phone: +91 94440 67890" },
-  { id: "camp-3", lat: 11.5150, lng: 77.2280, type: "camp", title: "Govt High School Relief Base #3", info: "Capacity: 310/400 occupied · Phone: +91 94440 54321" },
-  { id: "camp-4", lat: 11.4820, lng: 77.2900, type: "camp", title: "Indoor Sports Safe Zone #4", info: "Capacity: 150/300 occupied · Phone: +91 94440 98765" },
+  // Erode Relief Camps
+  { id: "camp-1", lat: 11.3444, lng: 77.7244, type: "camp", title: "Erode Central Relief Base #1", info: "Capacity: 245/500 occupied · Phone: +91 94440 12345" },
+  { id: "camp-2", lat: 11.4512, lng: 77.4610, type: "camp", title: "Bhavani Emergency Base #2", info: "Capacity: 180/350 occupied · Phone: +91 94440 67890" },
+  // Salem Relief Camps
+  { id: "camp-3", lat: 11.6650, lng: 78.1580, type: "camp", title: "Salem South Relief Base #3", info: "Capacity: 310/400 occupied · Phone: +91 94440 54321" },
+  { id: "camp-4", lat: 11.6920, lng: 78.1800, type: "camp", title: "Salem Steel Plant Safe Zone #4", info: "Capacity: 150/300 occupied · Phone: +91 94440 98765" },
+  // Coimbatore Relief Camps
+  { id: "camp-5", lat: 11.0180, lng: 76.9720, type: "camp", title: "Gandhipuram Evacuation Hub #5", info: "Capacity: 450/600 occupied · Phone: +91 94441 12345" },
+  { id: "camp-6", lat: 11.0450, lng: 76.9950, type: "camp", title: "Peelamedu Relief Base #6", info: "Capacity: 120/200 occupied · Phone: +91 94441 67890" },
+  // Trichy Relief Camps
+  { id: "camp-7", lat: 10.8050, lng: 78.6920, type: "camp", title: "Srirangam Temple Relief #7", info: "Capacity: 800/1000 occupied · Phone: +91 94442 54321" },
+  { id: "camp-8", lat: 10.8220, lng: 78.7100, type: "camp", title: "Trichy Cantt Safe Zone #8", info: "Capacity: 250/350 occupied · Phone: +91 94442 98765" },
 
   // Active Volunteers
-  { id: "vol-1", lat: 11.4980, lng: 77.2520, type: "volunteer", title: "Manoj Kumar (Volunteer Rescuer)", info: "Vehicle: Rescue Motor Boat ⛵ · Status: Available" },
-  { id: "vol-2", lat: 11.5080, lng: 77.2350, type: "volunteer", title: "Priya Dharshini (Rescue Patrol)", info: "Vehicle: 4x4 Heavy Truck 🚛 · Status: Dispatched" },
-  { id: "vol-3", lat: 11.4870, lng: 77.2750, type: "volunteer", title: "Karthik Raja (Rescue Unit)", info: "Vehicle: Emergency Ambulance 🚑 · Status: Available" },
-  { id: "vol-4", lat: 11.5200, lng: 77.2150, type: "volunteer", title: "Surya Prakash (Relief Scout)", info: "Vehicle: Disaster Relief SUV 🚙 · Status: Available" },
+  { id: "vol-1", lat: 11.3580, lng: 77.7120, type: "volunteer", title: "Manoj Kumar (Volunteer Rescuer)", info: "Vehicle: Rescue Motor Boat ⛵ · Status: Dispatched" },
+  { id: "vol-2", lat: 11.6780, lng: 78.1650, type: "volunteer", title: "Priya Dharshini (Rescue Patrol)", info: "Vehicle: 4x4 Heavy Truck 🚛 · Status: Dispatched" },
+  { id: "vol-3", lat: 11.0270, lng: 76.9650, type: "volunteer", title: "Karthik Raja (Rescue Unit)", info: "Vehicle: Emergency Ambulance 🚑 · Status: Available" },
+  { id: "vol-4", lat: 10.8100, lng: 78.7050, type: "volunteer", title: "Surya Prakash (Relief Scout)", info: "Vehicle: Disaster Relief SUV 🚙 · Status: Available" },
+  { id: "vol-5", lat: 11.4300, lng: 77.5000, type: "volunteer", title: "Naveen Raj (Evacuation)", info: "Vehicle: Rescue Motor Boat ⛵ · Status: Dispatched" },
+  { id: "vol-6", lat: 11.6850, lng: 78.1750, type: "volunteer", title: "Meena K. (Medic)", info: "Vehicle: Mobile Clinic 🏥 · Status: Available" },
+  { id: "vol-7", lat: 11.0350, lng: 76.9850, type: "volunteer", title: "Rahul V. (Logistics)", info: "Vehicle: Supply Truck 🚚 · Status: Dispatched" },
+  { id: "vol-8", lat: 10.8150, lng: 78.6850, type: "volunteer", title: "Anita S. (Coordinator)", info: "Vehicle: Transport Van 🚐 · Status: Available" },
 
   // Emergency SOS Requests
-  { id: "sos-1", lat: 11.494867, lng: 77.278934, type: "victim", title: "SOS: Kavitha R. & Family", info: "Level 5 Emergency: Diabetic patient, trapped in 4ft floodwater" },
-  { id: "sos-2", lat: 11.5110, lng: 77.2490, type: "victim", title: "SOS: Suresh Kumar (Roof Trapped)", info: "Level 5 Emergency: 3 seniors on terrace, ground floor flooded" },
-  { id: "sos-3", lat: 11.4850, lng: 77.2620, type: "victim", title: "SOS: Manoj B. (Senior Citizen)", info: "Level 4 Emergency: Wheelchair user stranded on 1st floor" },
-  { id: "sos-4", lat: 11.5010, lng: 77.2820, type: "victim", title: "SOS: Divya Dharshini & Group", info: "Level 4 Emergency: Power cut 18hrs, drinking water needed" }
+  { id: "sos-1", lat: 11.3648, lng: 77.7289, type: "victim", title: "SOS: Kavitha R. & Family", info: "Level 5 Emergency: Diabetic patient, trapped in 4ft floodwater" },
+  { id: "sos-2", lat: 11.4710, lng: 77.4490, type: "victim", title: "SOS: Suresh Kumar (Roof Trapped)", info: "Level 5 Emergency: 3 seniors on terrace, ground floor flooded" },
+  { id: "sos-3", lat: 11.6750, lng: 78.1720, type: "victim", title: "SOS: Manoj B. (Senior Citizen)", info: "Level 4 Emergency: Wheelchair user stranded on 1st floor" },
+  { id: "sos-4", lat: 11.6810, lng: 78.1620, type: "victim", title: "SOS: Divya Dharshini & Group", info: "Level 4 Emergency: Power cut 18hrs, drinking water needed" },
+  { id: "sos-5", lat: 11.0210, lng: 76.9820, type: "victim", title: "SOS: Ram M. (Medical Emergency)", info: "Level 5 Emergency: Pregnant woman, water rising rapidly" },
+  { id: "sos-6", lat: 11.0410, lng: 76.9620, type: "victim", title: "SOS: Shanthi K. (Infant)", info: "Level 4 Emergency: 6 month baby, out of formula/food" },
+  { id: "sos-7", lat: 10.8110, lng: 78.6920, type: "victim", title: "SOS: Vinoth R. (Trapped)", info: "Level 3 Emergency: Tree fell on house, structural damage" },
+  { id: "sos-8", lat: 10.8310, lng: 78.7020, type: "victim", title: "SOS: Lakshmi P. (Isolated)", info: "Level 3 Emergency: Cut off from mainland, food running low" },
+  { id: "sos-9", lat: 11.3800, lng: 77.7100, type: "victim", title: "SOS: Prabhu S. (Electrocution Risk)", info: "Level 5 Emergency: Live wire in water, trapped inside" },
+  { id: "sos-10", lat: 11.6600, lng: 78.1900, type: "victim", title: "SOS: Deepa N. (Group of 12)", info: "Level 4 Emergency: Hostel students stranded, no supplies" }
 ];
 
 export const Route = createFileRoute("/_authenticated/map")({
@@ -47,6 +64,7 @@ function MapPage() {
   const [activeSosCount, setActiveSosCount] = useState(0);
   const [activeVolunteersCount, setActiveVolunteersCount] = useState(0);
   const [totalCampsCount, setTotalCampsCount] = useState(0);
+  const [floodZonesCount, setFloodZonesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showVictims, setShowVictims] = useState(true);
   const [showVolunteers, setShowVolunteers] = useState(true);
@@ -157,27 +175,31 @@ function MapPage() {
       // 4. Fetch Flood Zones
       const { data: zones } = await supabase.from("flood_zones").select("*");
       if (zones) {
+        setFloodZonesCount(zones.length);
         const parsed = zones.map((z: any) => ({
           severity: z.severity,
           coordinates: Array.isArray(z.coordinates) ? z.coordinates : []
         }));
         setFloodZones(parsed);
+      } else {
+        setFloodZonesCount(2); // mock data length if API fails but zones is null
       }
 
       if (markersList.length === 0) {
         setMarkers(SAMPLE_MAP_MARKERS);
-        setActiveSosCount(4);
-        setActiveVolunteersCount(4);
-        setTotalCampsCount(4);
+        setActiveSosCount(10);
+        setActiveVolunteersCount(8);
+        setTotalCampsCount(8);
       } else {
         setMarkers(markersList);
       }
     } catch (err) {
       console.error(err);
       setMarkers(SAMPLE_MAP_MARKERS);
-      setActiveSosCount(4);
-      setActiveVolunteersCount(4);
-      setTotalCampsCount(4);
+      setActiveSosCount(10);
+      setActiveVolunteersCount(8);
+      setTotalCampsCount(8);
+      setFloodZonesCount(2);
     } finally {
       setLoading(false);
     }
@@ -187,7 +209,7 @@ function MapPage() {
     <DashboardShell title="Live GIS Control Map" subtitle="Real-time geo-visualization of relief camps, volunteers, and SOS alerts">
       <div className="space-y-6 page-enter flex flex-col h-[calc(100vh-140px)]">
         {/* Top summary row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 flex-shrink-0">
           <Card className="stat-card">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
@@ -227,6 +249,18 @@ function MapPage() {
           <Card className="stat-card">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">Flood Zones Active</p>
+                <h3 className="text-2xl font-black text-amber-600 mt-1">{floodZonesCount}</h3>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Layers className="w-4 h-4 text-amber-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="stat-card">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Filters & Toggles</p>
                 <div className="flex gap-1.5 mt-2">
                   <Badge
@@ -253,42 +287,110 @@ function MapPage() {
           </Card>
         </div>
 
-        {/* Map Area */}
-        <div className="flex-1 bg-card border border-border rounded-2xl overflow-hidden shadow-card relative">
-          {loading && (
-            <div className="absolute inset-0 bg-background/50 backdrop-blur-xs z-20 flex items-center justify-center">
-              <div className="text-center">
-                <RefreshCw className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground font-semibold">Updating Live Maps GIS layer…</p>
+        {/* Map and Activity Feed Area */}
+        <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+          <div className="flex-[3] bg-card border border-border rounded-2xl overflow-hidden shadow-card relative h-full min-h-[400px]">
+            {loading && (
+              <div className="absolute inset-0 bg-background/50 backdrop-blur-xs z-20 flex items-center justify-center">
+                <div className="text-center">
+                  <RefreshCw className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground font-semibold">Updating Live Maps GIS layer…</p>
+                </div>
+              </div>
+            )}
+
+            <GoogleMap
+              zoom={9}
+              markers={markers}
+              floodZones={floodZones}
+              className="w-full h-full"
+            />
+
+            {/* Floated Legend */}
+            <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur border rounded-xl p-3 shadow-lg z-10 text-xs space-y-1.5 min-w-[140px] pointer-events-auto">
+              <p className="font-bold border-b pb-1 text-foreground mb-1.5">GIS Map Legend</p>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
+                <span>SOS Victims</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
+                <span>Active Rescuers</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+                <span>Relief Camps</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/50 border border-amber-500 flex-shrink-0" />
+                <span>Flood Hazard Zones</span>
               </div>
             </div>
-          )}
+          </div>
 
-          <GoogleMap
-            zoom={9}
-            markers={markers}
-            floodZones={floodZones}
-            className="w-full h-full"
-          />
-
-          {/* Floated Legend */}
-          <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur border rounded-xl p-3 shadow-lg z-10 text-xs space-y-1.5 min-w-[140px] pointer-events-auto">
-            <p className="font-bold border-b pb-1 text-foreground mb-1.5">GIS Map Legend</p>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
-              <span>SOS Victims</span>
+          {/* Activity Feed */}
+          <div className="flex-1 bg-card border border-border rounded-2xl shadow-card overflow-hidden flex flex-col h-[300px] lg:h-full">
+            <div className="p-4 border-b border-border bg-muted/30 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              <h3 className="font-bold text-sm">Live Activity Feed</h3>
             </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
-              <span>Active Rescuers</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
-              <span>Relief Camps</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/50 border border-yellow-500 flex-shrink-0" />
-              <span>Flood Hazard Zones</span>
+            <div className="p-4 flex-1 overflow-y-auto space-y-4">
+              <div className="flex gap-3 text-sm border-b border-border pb-3">
+                <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">🆘 New SOS: Kavitha R. reported from Erode</p>
+                  <p className="text-xs text-muted-foreground">2 min ago</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm border-b border-border pb-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">✅ Rescued: Suresh K. evacuated to Camp #3</p>
+                  <p className="text-xs text-muted-foreground">8 min ago</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm border-b border-border pb-3">
+                <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">🚤 Volunteer Manoj dispatched to Sector 7</p>
+                  <p className="text-xs text-muted-foreground">12 min ago</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm border-b border-border pb-3">
+                <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">⛺ Camp #5 reached 90% capacity</p>
+                  <p className="text-xs text-muted-foreground">20 min ago</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm border-b border-border pb-3">
+                <div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">🌊 Water level rising in Zone B4</p>
+                  <p className="text-xs text-muted-foreground">35 min ago</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm border-b border-border pb-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">✅ Relief supplies delivered to Camp #1</p>
+                  <p className="text-xs text-muted-foreground">42 min ago</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm border-b border-border pb-3">
+                <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">🆘 New SOS: Ram M. reported from Coimbatore</p>
+                  <p className="text-xs text-muted-foreground">50 min ago</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm">
+                <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">🚑 Volunteer Priya dispatched to Coimbatore</p>
+                  <p className="text-xs text-muted-foreground">1 hr ago</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 /// <reference types="@types/google.maps" />
 import React, { useEffect, useRef, useCallback, useState } from "react";
+import type L_Type from "leaflet";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 
@@ -7,6 +8,7 @@ let isLoaded = false;
 let loadPromise: Promise<void> | null = null;
 
 function loadGoogleMaps(): Promise<void> {
+  if (typeof window === "undefined") return Promise.reject(new Error("SSR_NO_WINDOW"));
   if (isLoaded && window.google?.maps?.Map) return Promise.resolve();
   if (loadPromise) return loadPromise;
 
@@ -90,7 +92,7 @@ const MARKER_COLORS: Record<MapMarker["type"], string> = {
   volunteer: "#3b82f6",
   hospital: "#eab308",
   flood: "#374151",
-  user: "#8b5cf6",
+  user: "#1a73e8",
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -120,13 +122,14 @@ export function GoogleMap({
   const markerRefs = useRef<Map<string, google.maps.Marker>>(new Map());
   const directionsRenderers = useRef<google.maps.DirectionsRenderer[]>([]);
   const breadcrumbPolyline = useRef<google.maps.Polyline | null>(null);
-  const polygons = useRef<google.maps.Polygon[]>([]);
+  const polygons = useRef<(google.maps.Polygon | google.maps.Polyline)[]>([]);
   const [apiLoaded, setApiLoaded] = useState(isLoaded);
   const [loadError, setLoadError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
 
   // Load Google Maps API
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (window.google?.maps?.Map) {
       setApiLoaded(true);
       return;
@@ -257,42 +260,68 @@ export function GoogleMap({
 
     if (routes.length === 0) return;
 
-    const ds = new google.maps.DirectionsService();
+    try {
+      const ds = new google.maps.DirectionsService();
 
-    routes.forEach((rt) => {
-      const dr = new google.maps.DirectionsRenderer({
-        map: mapRef.current,
-        suppressMarkers: true,
-        polylineOptions: {
-          strokeColor: rt.color || "#3b82f6",
-          strokeWeight: 5,
-          strokeOpacity: 0.8,
-        },
-      });
+      routes.forEach((rt) => {
+        const dr = new google.maps.DirectionsRenderer({
+          map: mapRef.current,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: rt.color || "#3b82f6",
+            strokeWeight: 5,
+            strokeOpacity: 0.8,
+          },
+        });
 
-      directionsRenderers.current.push(dr);
+        directionsRenderers.current.push(dr);
 
-      ds.route(
-        {
-          origin: rt.origin,
-          destination: rt.destination,
-          travelMode: rt.travelMode === "WALKING" ? google.maps.TravelMode.WALKING : google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === "OK" && result) {
-            dr.setDirections(result);
-            const routeLeg = result.routes[0]?.legs[0];
-            if (routeLeg && onRouteCalculated) {
-              onRouteCalculated({
-                distance: routeLeg.distance?.text || "",
-                duration: routeLeg.duration?.text || "",
-                steps: routeLeg.steps.map((s) => s.instructions.replace(/<[^>]*>/g, "")),
-              });
+        try {
+          ds.route(
+            {
+              origin: rt.origin,
+              destination: rt.destination,
+              travelMode: rt.travelMode === "WALKING" ? google.maps.TravelMode.WALKING : google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+              if (status === "OK" && result) {
+                dr.setDirections(result);
+                const routeLeg = result.routes[0]?.legs[0];
+                if (routeLeg && onRouteCalculated) {
+                  onRouteCalculated({
+                    distance: routeLeg.distance?.text || "",
+                    duration: routeLeg.duration?.text || "",
+                    steps: routeLeg.steps.map((s) => s.instructions.replace(/<[^>]*>/g, "")),
+                  });
+                }
+              } else {
+                // If Google Directions API is unactivated/denied, draw polyline fallback silently
+                const fallbackPoly = new google.maps.Polyline({
+                  path: [rt.origin, rt.destination],
+                  geodesic: true,
+                  strokeColor: rt.color || "#3b82f6",
+                  strokeOpacity: 0.8,
+                  strokeWeight: 4,
+                  map: mapRef.current!,
+                });
+                polygons.current.push(fallbackPoly);
+              }
             }
-          }
+          );
+        } catch {
+          // Silent fallback for legacy/unactivated API
+          const fallbackPoly = new google.maps.Polyline({
+            path: [rt.origin, rt.destination],
+            geodesic: true,
+            strokeColor: rt.color || "#3b82f6",
+            strokeOpacity: 0.8,
+            strokeWeight: 4,
+            map: mapRef.current!,
+          });
+          polygons.current.push(fallbackPoly);
         }
-      );
-    });
+      });
+    } catch {}
   }, [routes, onRouteCalculated]);
 
   // Draw breadcrumb trail
@@ -346,6 +375,7 @@ export function GoogleMap({
     return (
       <InteractiveFallbackMap
         center={center}
+        zoom={zoom}
         markers={markers}
         routes={routes}
         onMapClick={onMapClick}
@@ -379,10 +409,11 @@ export function GoogleMap({
 }
 
 // ============================================================================
-// INTERACTIVE FALLBACK CANVAS/SVG MAP (Used when Google API Key is unavailable)
+// REAL INTERACTIVE LEAFLET MAP TILE ENGINE (Loaded with OpenStreetMap real street map tiles & Google Maps Live Blue Dot)
 // ============================================================================
 function InteractiveFallbackMap({
   center,
+  zoom = 13,
   markers = [],
   routes = [],
   onMapClick,
@@ -390,200 +421,146 @@ function InteractiveFallbackMap({
   style,
 }: {
   center: { lat: number; lng: number };
-  markers: MapMarker[];
-  routes: RouteInfo[];
+  zoom?: number;
+  markers?: MapMarker[];
+  routes?: RouteInfo[];
   onMapClick?: (lat: number, lng: number) => void;
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L_Type.Map | null>(null);
+  const markersRef = useRef<Map<string, L_Type.Marker>>(new Map());
+  const [leaflet, setLeaflet] = useState<typeof L_Type | null>(null);
 
-  // Map coordinates projection bounds (covering Tamil Nadu & surrounds)
-  const minLat = 8.0;
-  const maxLat = 13.5;
-  const minLng = 76.0;
-  const maxLng = 80.5;
+  // Dynamically load Leaflet only on client side (no SSR!)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-  const project = (lat: number, lng: number) => {
-    const x = ((lng - minLng) / (maxLng - minLng)) * 100;
-    const y = ((maxLat - lat) / (maxLat - minLat)) * 100;
-    return { x: Math.max(5, Math.min(95, x)), y: Math.max(5, Math.min(95, y)) };
-  };
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
 
-  const centerPos = project(center.lat, center.lng);
+    import("leaflet").then((L) => {
+      setLeaflet(L.default || L);
+    });
+  }, []);
+
+  // Initialize Leaflet Interactive Map with Real Street Map Tiles
+  useEffect(() => {
+    if (!leaflet || !containerRef.current || mapRef.current) return;
+
+    try {
+      const map = leaflet.map(containerRef.current, {
+        center: [center.lat, center.lng],
+        zoom: zoom,
+        zoomControl: true,
+        attributionControl: false,
+      });
+
+      // OpenStreetMap high-detail street map tiles!
+      leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        subdomains: ["a", "b", "c"],
+      }).addTo(map);
+
+      if (onMapClick) {
+        map.on("click", (e) => {
+          onMapClick(e.latlng.lat, e.latlng.lng);
+        });
+      }
+
+      mapRef.current = map;
+    } catch (e) {
+      console.warn("Leaflet map init error:", e);
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [leaflet]);
+
+  // Pan & Zoom with smooth 1.5s Leaflet flyTo animation!
+  useEffect(() => {
+    if (!mapRef.current || !center || !leaflet) return;
+    mapRef.current.flyTo([center.lat, center.lng], zoom, {
+      duration: 1.5,
+      easeLinearity: 0.25,
+    });
+  }, [center.lat, center.lng, zoom, leaflet]);
+
+  // Update Markers with Google Maps Live Location Blue Dot!
+  useEffect(() => {
+    if (!mapRef.current || !leaflet) return;
+    const map = mapRef.current;
+
+    // Remove old markers
+    const currentIds = new Set(markers.map((m) => m.id));
+    markersRef.current.forEach((marker, id) => {
+      if (!currentIds.has(id)) {
+        marker.remove();
+        markersRef.current.delete(id);
+      }
+    });
+
+    markers.forEach((m) => {
+      if (markersRef.current.has(m.id)) {
+        markersRef.current.get(m.id)!.setLatLng([m.lat, m.lng]);
+        return;
+      }
+
+      let icon: L_Type.DivIcon;
+      if (m.type === "user") {
+        // EXACT GOOGLE MAPS LIVE LOCATION BLUE DOT!
+        icon = leaflet.divIcon({
+          className: "google-maps-live-blue-dot",
+          html: `
+            <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; transform: translate(-10px, -10px);">
+              <div style="position: absolute; width: 44px; height: 44px; border-radius: 50%; background: rgba(26, 115, 232, 0.25); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+              <div style="position: absolute; width: 28px; height: 28px; border-radius: 50%; background: rgba(26, 115, 232, 0.35);"></div>
+              <div style="width: 14px; height: 14px; border-radius: 50%; background: #1a73e8; border: 2.5px solid #ffffff; box-shadow: 0 0 10px rgba(0,0,0,0.4); z-index: 10;"></div>
+            </div>
+          `,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+      } else {
+        icon = leaflet.divIcon({
+          className: "custom-leaflet-marker",
+          html: `<div style="background:${MARKER_COLORS[m.type] || '#3b82f6'}; width:24px; height:24px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; font-size:12px; shadow:0 2px 6px rgba(0,0,0,0.3);">${MARKER_ICONS[m.type] || '📍'}</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+      }
+
+      const marker = leaflet.marker([m.lat, m.lng], { icon }).addTo(map);
+
+      if (m.info || m.title) {
+        marker.bindPopup(`
+          <div style="padding:4px 8px; font-family:sans-serif; color:#0f172a;">
+            <strong style="font-size:12px;">${m.title}</strong>
+            ${m.info ? `<p style="margin:2px 0 0; font-size:11px; color:#475569;">${m.info}</p>` : ""}
+          </div>
+        `);
+      }
+
+      markersRef.current.set(m.id, marker);
+    });
+  }, [markers, leaflet]);
 
   return (
     <div
-      className={`relative w-full h-full min-h-[380px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden select-none flex flex-col ${className || ""}`}
+      ref={containerRef}
+      className={`relative w-full h-full min-h-[260px] rounded-xl overflow-hidden border border-slate-800 shadow-xl ${className || ""}`}
       style={style}
-    >
-      {/* Map Header / Status Bar */}
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-slate-900/90 backdrop-blur border border-slate-700/80 px-3 py-1.5 rounded-xl shadow-lg text-xs">
-        <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-        <span className="font-bold text-slate-200">Interactive GIS Disaster Map</span>
-        <span className="text-[10px] text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded-full font-mono">Live Navigation</span>
-      </div>
-
-      {/* Map Controls */}
-      <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-1.5">
-        <button
-          type="button"
-          onClick={() => setZoomLevel((z) => Math.min(z + 0.3, 2.5))}
-          className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-bold hover:bg-slate-800 flex items-center justify-center shadow-lg"
-          title="Zoom In"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          onClick={() => setZoomLevel((z) => Math.max(z - 0.3, 0.8))}
-          className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-bold hover:bg-slate-800 flex items-center justify-center shadow-lg"
-          title="Zoom Out"
-        >
-          −
-        </button>
-      </div>
-
-      {/* SVG Canvas */}
-      <div
-        className="w-full h-full flex-1 relative cursor-crosshair overflow-hidden"
-        onClick={(e) => {
-          if (!onMapClick) return;
-          const rect = e.currentTarget.getBoundingClientRect();
-          const clickX = (e.clientX - rect.left) / rect.width;
-          const clickY = (e.clientY - rect.top) / rect.height;
-          const lat = maxLat - clickY * (maxLat - minLat);
-          const lng = minLng + clickX * (maxLng - minLng);
-          onMapClick(lat, lng);
-        }}
-      >
-        <svg
-          className="w-full h-full absolute inset-0"
-          style={{ transform: `scale(${zoomLevel})`, transformOrigin: `${centerPos.x}% ${centerPos.y}%`, transition: "transform 0.2s ease" }}
-        >
-          {/* Grid Pattern */}
-          <defs>
-            <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(51, 65, 85, 0.3)" strokeWidth="1" />
-            </pattern>
-            <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#38bdf8" />
-              <stop offset="100%" stopColor="#22c55e" />
-            </linearGradient>
-          </defs>
-          <rect width="100%" height="100%" fill="#090d16" />
-          <rect width="100%" height="100%" fill="url(#gridPattern)" />
-
-          {/* Simplified Coastline Outline for TN */}
-          <path
-            d="M 15 20 Q 30 40 45 60 Q 60 75 75 90 L 90 95 L 95 85 Q 85 50 65 30 Q 45 15 15 20 Z"
-            fill="rgba(14, 165, 233, 0.05)"
-            stroke="rgba(56, 189, 248, 0.25)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
-
-          {/* Route Lines */}
-          {routes.map((rt, idx) => {
-            const orig = project(rt.origin.lat, rt.origin.lng);
-            const dest = project(rt.destination.lat, rt.destination.lng);
-            return (
-              <g key={`route-${idx}`}>
-                <line
-                  x1={`${orig.x}%`}
-                  y1={`${orig.y}%`}
-                  x2={`${dest.x}%`}
-                  y2={`${dest.y}%`}
-                  stroke={rt.color || "url(#routeGradient)"}
-                  strokeWidth="4"
-                  strokeDasharray="6 4"
-                  className="animate-pulse"
-                />
-                <circle cx={`${orig.x}%`} cy={`${orig.y}%`} r="6" fill="#38bdf8" />
-                <circle cx={`${dest.x}%`} cy={`${dest.y}%`} r="6" fill="#22c55e" />
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* HTML Markers */}
-        <div
-          className="w-full h-full absolute inset-0 pointer-events-none"
-          style={{ transform: `scale(${zoomLevel})`, transformOrigin: `${centerPos.x}% ${centerPos.y}%`, transition: "transform 0.2s ease" }}
-        >
-          {markers.map((m) => {
-            const pos = project(m.lat, m.lng);
-            const color = MARKER_COLORS[m.type] || "#3b82f6";
-            const icon = MARKER_ICONS[m.type] || "📍";
-            const isSelected = selectedMarker?.id === m.id;
-
-            return (
-              <div
-                key={m.id}
-                className="absolute pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-125 z-10"
-                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedMarker(m);
-                  m.onClick?.();
-                }}
-              >
-                <div className="relative flex flex-col items-center group cursor-pointer">
-                  {/* Ping Animation for Victims & SOS */}
-                  {(m.type === "victim" || m.type === "user") && (
-                    <span className="absolute w-8 h-8 rounded-full bg-red-500/40 animate-ping" />
-                  )}
-
-                  {/* Marker Pin Icon */}
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center shadow-lg border-2 border-white text-xs"
-                    style={{ backgroundColor: color }}
-                  >
-                    <span>{icon}</span>
-                  </div>
-
-                  {/* Label */}
-                  <div className="mt-1 px-2 py-0.5 rounded-md bg-slate-900/90 border border-slate-700 text-[10px] font-bold text-slate-200 whitespace-nowrap shadow-md">
-                    {m.title}
-                  </div>
-
-                  {/* Active Tooltip Popover */}
-                  {isSelected && (
-                    <div className="absolute bottom-full mb-2 w-48 p-2.5 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl text-xs z-30 pointer-events-auto">
-                      <div className="flex justify-between items-start font-bold text-slate-100 mb-1">
-                        <span>{icon} {m.title}</span>
-                        <button
-                          type="button"
-                          onClick={(ev) => { ev.stopPropagation(); setSelectedMarker(null); }}
-                          className="text-slate-400 hover:text-white"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      {m.info && <p className="text-[11px] text-slate-300 leading-tight">{m.info}</p>}
-                      <div className="mt-2 text-[10px] text-slate-500 font-mono">
-                        GPS: {m.lat.toFixed(4)}, {m.lng.toFixed(4)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Map Legend */}
-      <div className="p-2.5 bg-slate-900/95 border-t border-slate-800 flex flex-wrap items-center justify-between text-[11px] text-slate-300 gap-2 z-20">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="flex items-center gap-1 font-medium"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Stranded Victim</span>
-          <span className="flex items-center gap-1 font-medium"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Relief Camp</span>
-          <span className="flex items-center gap-1 font-medium"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Rescue Volunteer</span>
-        </div>
-        <span className="text-[10px] text-slate-500 font-mono">GIS System Online</span>
-      </div>
-    </div>
+    />
   );
 }
 

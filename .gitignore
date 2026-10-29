@@ -31,3 +31,8 @@ bun.lockb
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temporary scratch and test files
+scratch_*.ps1
+test_*.py
+test_*.docx

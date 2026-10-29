@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": [
+    {
+      "name": "frontend",
+      "src": "frontend",
+      "route": "/"
+    },
+    {
+      "name": "backend",
+      "src": "backend",
+      "route": "/api"
+    }
+  ]
+}

@@ -152,15 +152,21 @@ If the question is about flood emergency, first aid, or relief shelters, provide
       lower.includes("cm of tn") ||
       lower.includes("chief minister of tn") ||
       lower.includes("cm of tamil") ||
+      lower.includes("cm of tamilnadu") ||
       lower.includes("chief minister of tamil") ||
+      lower.includes("chief minister of tamilnadu") ||
       lower.includes("who is cm") ||
       lower.includes("who is the cm") ||
+      lower.includes("tamilnadu cm") ||
+      lower.includes("tamil nadu cm") ||
+      lower.includes("tn cm") ||
+      lower.includes("next cm") ||
       lower.includes("joseph vijay") ||
       lower.includes("thalapathy vijay") ||
       lower.includes("tvk")
     ) {
       return {
-        text: "🏛️ **Chief Minister of Tamil Nadu**:\n\n• **Official Serving CM**: **M. K. Stalin** (DMK, serving since May 7, 2021).\n• **Major Political Contender & Projected CM**: Superstar actor **Joseph Vijay** (Thalapathy Vijay), president of the **Tamilaga Vettri Kazhagam (TVK)** party, who is widely projected and backed by millions of supporters across Tamil Nadu as the future Chief Minister for the upcoming 2026 assembly elections!",
+        text: "🏛️ **Chief Minister of Tamil Nadu**:\n\n• **Chief Minister**: **Joseph Vijay** (Chandrasekaran Joseph Vijay, fondly known as **Thalapathy Vijay**). He is the founder and president of the **Tamilaga Vettri Kazhagam (TVK)** party and serves as the Chief Minister of Tamil Nadu.\n• **Previous CM**: **M. K. Stalin** (DMK, served 2021–2026).",
         link: { to: "/emergency", label: "🚨 Disaster Control Portal" }
       };
     }
@@ -260,7 +266,32 @@ If the question is about flood emergency, first aid, or relief shelters, provide
       console.warn("Tertiary Real-Time AI fetch error:", e);
     }
 
-    // 4. Smart Knowledge & Conversational Engine (Handles general knowledge & natural chat)
+    // 5. Real-Time Knowledge Engine (Live Search for accurate factual knowledge)
+    try {
+      const wikiSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(userPrompt)}&utf8=&format=json&origin=*`;
+      const sRes = await fetchWithTimeout(wikiSearchUrl, {}, 4000);
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        const topResult = sData.query?.search?.[0];
+        if (topResult?.title) {
+          const sumUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topResult.title)}`;
+          const sumRes = await fetchWithTimeout(sumUrl, {}, 4000);
+          if (sumRes.ok) {
+            const sumData = await sumRes.json();
+            if (sumData.extract && sumData.extract.trim().length > 25) {
+              return {
+                text: `📖 **${sumData.title}**${sumData.description ? ` *(${sumData.description})*` : ""}:\n\n${sumData.extract}`,
+                link
+              };
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Wikipedia knowledge fetch error:", e);
+    }
+
+    // 6. Smart Knowledge & Conversational Engine (Handles general knowledge & natural chat)
 
     // Identity / Greetings
     if (lower.includes("name") || lower.includes("who are you") || lower.includes("what are you")) {
@@ -348,9 +379,10 @@ If the question is about flood emergency, first aid, or relief shelters, provide
       };
     }
 
-    // Dynamic, natural AI response for general knowledge queries
+    // Intelligent Conversational Fallback
     return {
-      text: `💡 **ReliefAI Response**: That is an interesting question about *"${userPrompt}"*!\n\nI am your 24/7 Realtime AI Assistant. Feel free to ask me any general knowledge questions, conversational queries, or emergency flood relief assistance!`
+      text: `🤖 **ReliefAI Assistant**: I am standing by 24/7 to assist with live emergency rescue, shelters, first aid, and general inquiries.\n\nCould you please clarify your request, or choose one of our quick disaster response tools below?`,
+      link: { to: "/emergency", label: "🚨 Emergency Disaster Center" }
     };
   };
 

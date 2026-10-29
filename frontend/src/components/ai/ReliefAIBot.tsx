@@ -38,6 +38,51 @@ interface Message {
   isAiLive?: boolean;
 }
 
+// Safely extract clean conversational text from raw API response or JSON
+function parseAiContent(raw: unknown): string {
+  if (!raw) return "";
+  let data: any = raw;
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      try {
+        data = JSON.parse(trimmed);
+      } catch {
+        data = raw;
+      }
+    }
+  }
+
+  if (typeof data === "object" && data !== null) {
+    const extracted =
+      data.choices?.[0]?.message?.content ||
+      data.choices?.[0]?.delta?.content ||
+      data.choices?.[0]?.text ||
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      (Array.isArray(data.content) ? data.content[0]?.text : data.content) ||
+      data.text ||
+      data.response ||
+      data.reply ||
+      (typeof data.message === "string" ? data.message : "");
+
+    if (typeof extracted === "string" && extracted.trim().length > 0) {
+      data = extracted;
+    } else {
+      return "";
+    }
+  }
+
+  if (typeof data === "string") {
+    // Strip reasoning / think tags from reasoning models (e.g. DeepSeek/gpt-oss)
+    let clean = data.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    clean = clean.replace(/\[THOUGHT\][\s\S]*?\[\/THOUGHT\]/gi, "").trim();
+    return clean;
+  }
+
+  return "";
+}
+
 const DEFAULT_CHIPS = [
   { label: "🆘 How to trigger SOS", category: "sos" },
   { label: "🩺 Drowning & CPR First Aid", category: "first_aid" },
@@ -109,9 +154,9 @@ If the question is about flood emergency, first aid, or relief shelters, provide
             }
           );
           const data = await res.json();
-          if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const aiText = data.candidates[0].content.parts[0].text;
-            return { text: aiText.trim(), link };
+          const clean = parseAiContent(data);
+          if (clean) {
+            return { text: clean, link };
           } else if (data.error) {
             console.warn(`Gemini API Error (${model}):`, data.error);
           }
@@ -136,8 +181,9 @@ If the question is about flood emergency, first aid, or relief shelters, provide
       });
       if (res.ok) {
         const text = await res.text();
-        if (text && text.trim().length > 0 && !text.includes("<!DOCTYPE") && !text.includes("<html")) {
-          return { text: text.trim(), link };
+        const clean = parseAiContent(text);
+        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html")) {
+          return { text: clean, link };
         }
       }
     } catch (e) {
@@ -149,8 +195,9 @@ If the question is about flood emergency, first aid, or relief shelters, provide
       const getRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(userPrompt)}?model=openai`);
       if (getRes.ok) {
         const getText = await getRes.text();
-        if (getText && getText.trim().length > 0 && !getText.includes("<!DOCTYPE") && !getText.includes("<html")) {
-          return { text: getText.trim(), link };
+        const clean = parseAiContent(getText);
+        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html")) {
+          return { text: clean, link };
         }
       }
     } catch (e) {

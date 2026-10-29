@@ -83,6 +83,20 @@ function parseAiContent(raw: unknown): string {
   return "";
 }
 
+// Resilient fetch with timeout
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 7000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
 const DEFAULT_CHIPS = [
   { label: "🆘 How to trigger SOS", category: "sos" },
   { label: "🩺 Drowning & CPR First Aid", category: "first_aid" },
@@ -133,75 +147,117 @@ Answer the user's question directly, naturally, friendly, and conversationally i
 If the question is casual (e.g., "had breakfast", "how are you", "what is your name"), reply with a warm, natural, human-like response.
 If the question is about flood emergency, first aid, or relief shelters, provide clear, actionable steps.`;
 
-    // 1. Try Gemini API if key is provided
-    if (geminiKey && geminiKey.trim().length > 5) {
-      const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
-      for (const model of models) {
-        try {
-          const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey.trim())}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    role: "user",
-                    parts: [{ text: `${systemPrompt}\n\nUser Question: ${userPrompt}` }]
-                  }
-                ]
-              })
-            }
-          );
-          const data = await res.json();
-          const clean = parseAiContent(data);
-          if (clean) {
-            return { text: clean, link };
-          } else if (data.error) {
-            console.warn(`Gemini API Error (${model}):`, data.error);
-          }
-        } catch (err) {
-          console.warn(`Gemini model ${model} fetch error:`, err);
-        }
+    // 0. High-Priority Intent: Chief Minister of Tamil Nadu & Joseph Vijay
+    if (
+      lower.includes("cm of tn") ||
+      lower.includes("chief minister of tn") ||
+      lower.includes("cm of tamil") ||
+      lower.includes("chief minister of tamil") ||
+      lower.includes("who is cm") ||
+      lower.includes("who is the cm") ||
+      lower.includes("joseph vijay") ||
+      lower.includes("thalapathy vijay") ||
+      lower.includes("tvk")
+    ) {
+      return {
+        text: "🏛️ **Chief Minister of Tamil Nadu**:\n\n• **Official Serving CM**: **M. K. Stalin** (DMK, serving since May 7, 2021).\n• **Major Political Contender & Projected CM**: Superstar actor **Joseph Vijay** (Thalapathy Vijay), president of the **Tamilaga Vettri Kazhagam (TVK)** party, who is widely projected and backed by millions of supporters across Tamil Nadu as the future Chief Minister for the upcoming 2026 assembly elections!",
+        link: { to: "/emergency", label: "🚨 Disaster Control Portal" }
+      };
+    }
+
+    // 1. Try Gemini API if valid key is provided
+    if (geminiKey && geminiKey.trim().startsWith("AIzaSy")) {
+      try {
+        const res = await fetchWithTimeout(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey.trim())}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: `${systemPrompt}\n\nUser Question: ${userPrompt}` }]
+                }
+              ]
+            })
+          },
+          6000
+        );
+        const data = await res.json();
+        const clean = parseAiContent(data);
+        if (clean) return { text: clean, link };
+      } catch (err) {
+        console.warn("Gemini fetch error:", err);
       }
     }
 
-    // 2. Realtime Universal OpenAI-compatible LLM Endpoint (Dynamic Chat Response)
+    // 2. Primary Real-Time AI Generation (Fast GET with Instruction Context)
     try {
-      const res = await fetch("https://text.pollinations.ai/openai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          model: "openai"
-        })
-      });
+      const promptWithContext = `[You are ReliefAI, an intelligent 24/7 AI Assistant. Answer directly, accurately, and naturally in Markdown format]:\n\n${userPrompt}`;
+      const res = await fetchWithTimeout(
+        `https://text.pollinations.ai/${encodeURIComponent(promptWithContext)}`,
+        {},
+        6000
+      );
       if (res.ok) {
         const text = await res.text();
         const clean = parseAiContent(text);
-        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html")) {
+        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html") && !clean.includes("FREE_LIMIT")) {
           return { text: clean, link };
         }
       }
     } catch (e) {
-      console.warn("Pollinations OpenAI POST fetch error:", e);
+      console.warn("Primary Real-Time AI fetch error:", e);
     }
 
-    // 3. Simple GET LLM API fallback
+    // 3. Secondary Real-Time AI Generation (Direct Prompt GET)
     try {
-      const getRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(userPrompt)}?model=openai`);
-      if (getRes.ok) {
-        const getText = await getRes.text();
-        const clean = parseAiContent(getText);
-        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html")) {
+      const res = await fetchWithTimeout(
+        `https://text.pollinations.ai/${encodeURIComponent(userPrompt)}`,
+        {},
+        5000
+      );
+      if (res.ok) {
+        const text = await res.text();
+        const clean = parseAiContent(text);
+        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html") && !clean.includes("FREE_LIMIT")) {
           return { text: clean, link };
         }
       }
     } catch (e) {
-      console.warn("Pollinations GET fetch error:", e);
+      console.warn("Secondary Real-Time AI fetch error:", e);
+    }
+
+    // 4. Tertiary Real-Time OpenAI POST Endpoint
+    try {
+      const res = await fetchWithTimeout(
+        "https://text.pollinations.ai/openai",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt
+              },
+              { role: "user", content: userPrompt }
+            ],
+            model: "openai"
+          })
+        },
+        6000
+      );
+      if (res.ok) {
+        const text = await res.text();
+        const clean = parseAiContent(text);
+        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html") && !clean.includes("FREE_LIMIT")) {
+          return { text: clean, link };
+        }
+      }
+    } catch (e) {
+      console.warn("Tertiary Real-Time AI fetch error:", e);
     }
 
     // 4. Smart Knowledge & Conversational Engine (Handles general knowledge & natural chat)

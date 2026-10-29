@@ -147,7 +147,27 @@ Answer the user's question directly, naturally, friendly, and conversationally i
 If the question is casual (e.g., "had breakfast", "how are you", "what is your name"), reply with a warm, natural, human-like response.
 If the question is about flood emergency, first aid, or relief shelters, provide clear, actionable steps.`;
 
-    // 0. High-Priority Intent: Chief Minister of Tamil Nadu & Joseph Vijay
+    // 0. Math Calculation Intent
+    const mathMatch = userPrompt.replace(/what is|calculate|solve|\?|=/gi, "").trim();
+    if (/^[\d\s\+\-\*\/\.\(\)]+$/.test(mathMatch) && /[\+\-\*\/]/.test(mathMatch)) {
+      try {
+        const tokens = mathMatch.match(/(\d+\.?\d*|[\+\-\*\/])/g);
+        if (tokens && tokens.length >= 3) {
+          let val = parseFloat(tokens[0]);
+          for (let i = 1; i < tokens.length; i += 2) {
+            const op = tokens[i];
+            const next = parseFloat(tokens[i + 1]);
+            if (op === "+") val += next;
+            else if (op === "-") val -= next;
+            else if (op === "*") val *= next;
+            else if (op === "/") val = next !== 0 ? val / next : 0;
+          }
+          return { text: `🔢 **Calculation**: \`${mathMatch}\` = **${val}**` };
+        }
+      } catch {}
+    }
+
+    // 1. High-Priority Intent: Chief Minister of Tamil Nadu & Joseph Vijay
     if (
       lower.includes("cm of tn") ||
       lower.includes("chief minister of tn") ||
@@ -171,40 +191,135 @@ If the question is about flood emergency, first aid, or relief shelters, provide
       };
     }
 
-    // 1. Try Gemini API if valid key is provided
-    if (geminiKey && geminiKey.trim().startsWith("AIzaSy")) {
-      try {
-        const res = await fetchWithTimeout(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey.trim())}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [{ text: `${systemPrompt}\n\nUser Question: ${userPrompt}` }]
-                }
-              ]
-            })
-          },
-          6000
-        );
-        const data = await res.json();
-        const clean = parseAiContent(data);
-        if (clean) return { text: clean, link };
-      } catch (err) {
-        console.warn("Gemini fetch error:", err);
+    // 2. National & World Leaders
+    if (lower.includes("pm of india") || lower.includes("prime minister of india") || (lower.includes("who is pm") && !lower.includes("uk"))) {
+      return {
+        text: "🇮🇳 **Prime Minister of India**:\n\nThe current Prime Minister of India is **Narendra Modi** (Bharatiya Janata Party), serving as the 14th Prime Minister of India since May 26, 2014."
+      };
+    }
+    if (lower.includes("president of india")) {
+      return {
+        text: "🇮🇳 **President of India**:\n\nThe President of India is **Droupadi Murmu**, serving as the 15th President of the Republic of India since July 25, 2022."
+      };
+    }
+    if (lower.includes("president of usa") || lower.includes("president of america") || lower.includes("us president") || lower.includes("who is us president")) {
+      return {
+        text: "🇺🇸 **President of the United States**:\n\nThe President of the United States is **Donald Trump** (serving as the 47th President of the United States)."
+      };
+    }
+    if (lower.includes("pm of uk") || lower.includes("prime minister of uk") || lower.includes("uk prime minister")) {
+      return {
+        text: "🇬🇧 **Prime Minister of the United Kingdom**:\n\nThe Prime Minister of the United Kingdom is **Keir Starmer** (Labour Party, in office since July 2024)."
+      };
+    }
+
+    // 3. Capitals & Geography Dictionary
+    const capitals: Record<string, string> = {
+      "tamil nadu": "Chennai",
+      "tamilnadu": "Chennai",
+      "kerala": "Thiruvananthapuram",
+      "karnataka": "Bengaluru",
+      "andhra pradesh": "Amaravati",
+      "andhra": "Amaravati",
+      "telangana": "Hyderabad",
+      "maharashtra": "Mumbai",
+      "india": "New Delhi",
+      "france": "Paris",
+      "japan": "Tokyo",
+      "usa": "Washington, D.C.",
+      "america": "Washington, D.C.",
+      "united states": "Washington, D.C.",
+      "uk": "London",
+      "england": "London",
+      "germany": "Berlin",
+      "russia": "Moscow",
+      "australia": "Canberra",
+      "canada": "Ottawa",
+      "china": "Beijing",
+      "italy": "Rome",
+      "spain": "Madrid",
+      "brazil": "Brasília",
+      "egypt": "Cairo",
+      "singapore": "Singapore",
+      "uae": "Abu Dhabi"
+    };
+    for (const [place, cap] of Object.entries(capitals)) {
+      if (lower.includes("capital") && lower.includes(place)) {
+        return {
+          text: `📍 The capital of **${place.charAt(0).toUpperCase() + place.slice(1)}** is **${cap}**!`
+        };
       }
     }
 
-    // 2. Primary Real-Time AI Generation (Fast GET with Instruction Context)
+    // 4. Inventions & Scientific Discoveries
+    if (lower.includes("computer") && (lower.includes("invent") || lower.includes("father of"))) {
+      return {
+        text: "💻 **Inventor of the Computer**:\n\n• **Charles Babbage** is regarded as the **Father of the Computer** for designing the first mechanical computer (Analytical Engine, 1837).\n• **Alan Turing** is considered the father of modern theoretical computer science and artificial intelligence."
+      };
+    }
+    if (lower.includes("telephone") && lower.includes("invent")) {
+      return {
+        text: "📞 **Inventor of the Telephone**:\n\n**Alexander Graham Bell** was awarded the first U.S. patent for the electric telephone in March 1876."
+      };
+    }
+    if (lower.includes("light bulb") && lower.includes("invent")) {
+      return {
+        text: "💡 **Inventor of the Light Bulb**:\n\n**Thomas Alva Edison** developed the first practical, long-lasting incandescent electric light bulb in 1879."
+      };
+    }
+    if (lower.includes("gravity") && (lower.includes("discover") || lower.includes("invent") || lower.includes("who found"))) {
+      return {
+        text: "🍎 **Discovery of Gravity**:\n\n**Sir Isaac Newton** formulated the Universal Law of Gravitation in 1687 after observing a falling apple."
+      };
+    }
+    if (lower.includes("airplane") && lower.includes("invent")) {
+      return {
+        text: "✈️ **Inventors of the Airplane**:\n\nThe **Wright Brothers** (Orville and Wilbur Wright) made the first successful controlled, powered heavier-than-air airplane flight on December 17, 1903."
+      };
+    }
+    if (lower.includes("internet") && (lower.includes("invent") || lower.includes("father"))) {
+      return {
+        text: "🌐 **Inventors of the Internet**:\n\n• **Vint Cerf and Bob Kahn** designed the core TCP/IP communication protocols.\n• **Sir Tim Berners-Lee** invented the **World Wide Web (WWW)** in 1989."
+      };
+    }
+    if (lower.includes("photosynthesis")) {
+      return {
+        text: "🌿 **What is Photosynthesis?**:\n\nPhotosynthesis is the biological process used by green plants and algae to convert light energy from the sun into chemical energy (glucose), absorbing carbon dioxide and releasing vital oxygen: `6CO₂ + 6H₂O + Sunlight → C₆H₁₂O₆ + 6O₂`."
+      };
+    }
+    if (lower.includes("water formula") || lower.includes("formula of water")) {
+      return {
+        text: "💧 **Chemical Formula of Water**:\n\nThe chemical formula of water is **H₂O** (two hydrogen atoms covalently bonded to one oxygen atom)."
+      };
+    }
+    if (lower.includes("speed of light")) {
+      return {
+        text: "⚡ **Speed of Light**:\n\nThe speed of light in a vacuum is exactly **299,792,458 meters per second** (~300,000 km/s or ~186,282 miles per second)."
+      };
+    }
+
+    // 5. Creative & Conversational Intents
+    if (lower.includes("joke") || lower.includes("funny")) {
+      const jokes = [
+        "😄 Why do programmers prefer dark mode? Because light attracts bugs!",
+        "😄 Why was the computer cold at the relief camp? Because it left its Windows open!",
+        "😄 What did the ocean say to the rescue boat? Nothing, it just waved! 🌊"
+      ];
+      return { text: jokes[Math.floor(Math.random() * jokes.length)] };
+    }
+    if (lower.includes("poem") || lower.includes("rhyme")) {
+      return {
+        text: "📜 **Rising Above The Storm**:\n\n*When torrential rains begin to pour,*\n*And floodwaters reach the door,*\n*Courage and unity lead the way,*\n*Together we welcome a brighter day.*"
+      };
+    }
+
+    // 6. Real-Time AI Generation (Fast GET / POST)
     try {
-      const promptWithContext = `[You are ReliefAI, an intelligent 24/7 AI Assistant. Answer directly, accurately, and naturally in Markdown format]:\n\n${userPrompt}`;
+      const promptWithContext = `[You are ReliefAI, an intelligent 24/7 AI Assistant. Answer directly, accurately, wisely and naturally in Markdown format]:\n\n${userPrompt}`;
       const res = await fetchWithTimeout(
         `https://text.pollinations.ai/${encodeURIComponent(promptWithContext)}`,
         {},
-        6000
+        4000
       );
       if (res.ok) {
         const text = await res.text();
@@ -217,58 +332,14 @@ If the question is about flood emergency, first aid, or relief shelters, provide
       console.warn("Primary Real-Time AI fetch error:", e);
     }
 
-    // 3. Secondary Real-Time AI Generation (Direct Prompt GET)
+    // 7. Live Entity-Cleaned Real-Time Knowledge Engine (Wikipedia)
     try {
-      const res = await fetchWithTimeout(
-        `https://text.pollinations.ai/${encodeURIComponent(userPrompt)}`,
-        {},
-        5000
-      );
-      if (res.ok) {
-        const text = await res.text();
-        const clean = parseAiContent(text);
-        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html") && !clean.includes("FREE_LIMIT")) {
-          return { text: clean, link };
-        }
-      }
-    } catch (e) {
-      console.warn("Secondary Real-Time AI fetch error:", e);
-    }
-
-    // 4. Tertiary Real-Time OpenAI POST Endpoint
-    try {
-      const res = await fetchWithTimeout(
-        "https://text.pollinations.ai/openai",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: "system",
-                content: systemPrompt
-              },
-              { role: "user", content: userPrompt }
-            ],
-            model: "openai"
-          })
-        },
-        6000
-      );
-      if (res.ok) {
-        const text = await res.text();
-        const clean = parseAiContent(text);
-        if (clean && clean.length > 0 && !clean.includes("<!DOCTYPE") && !clean.includes("<html") && !clean.includes("FREE_LIMIT")) {
-          return { text: clean, link };
-        }
-      }
-    } catch (e) {
-      console.warn("Tertiary Real-Time AI fetch error:", e);
-    }
-
-    // 5. Real-Time Knowledge Engine (Live Search for accurate factual knowledge)
-    try {
-      const wikiSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(userPrompt)}&utf8=&format=json&origin=*`;
+      const entity = userPrompt
+        .replace(/^(who is|who was|what is|what are|where is|tell me about|explain|define)\s+/i, "")
+        .replace(/\?+$/, "")
+        .trim();
+      const queryToSearch = entity.length > 2 ? entity : userPrompt;
+      const wikiSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(queryToSearch)}&utf8=&format=json&origin=*`;
       const sRes = await fetchWithTimeout(wikiSearchUrl, {}, 4000);
       if (sRes.ok) {
         const sData = await sRes.json();
@@ -279,8 +350,9 @@ If the question is about flood emergency, first aid, or relief shelters, provide
           if (sumRes.ok) {
             const sumData = await sumRes.json();
             if (sumData.extract && sumData.extract.trim().length > 25) {
+              const sentences = sumData.extract.split(/(?<=[.?!])\s+/).slice(0, 3).join(" ");
               return {
-                text: `📖 **${sumData.title}**${sumData.description ? ` *(${sumData.description})*` : ""}:\n\n${sumData.extract}`,
+                text: `💡 **${sumData.title}**${sumData.description ? ` *(${sumData.description})*` : ""}:\n\n${sentences}`,
                 link
               };
             }

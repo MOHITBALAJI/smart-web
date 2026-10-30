@@ -2,7 +2,8 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import type L_Type from "leaflet";
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+const DEFAULT_GOOGLE_MAPS_API_KEY = "AIzaSyDqcKOqiDT62U7BZ9EPAIckzEXtUdc5VFc";
+const GOOGLE_MAPS_API_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || DEFAULT_GOOGLE_MAPS_API_KEY;
 
 let isLoaded = false;
 let loadPromise: Promise<void> | null = null;
